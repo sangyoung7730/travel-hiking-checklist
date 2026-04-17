@@ -1,0 +1,1021 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>My Travel & Hiking Checklist</title>
+<link rel="manifest" href="manifest.json">
+<meta name="theme-color" content="#302b63">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="apple-mobile-web-app-title" content="여행등산">
+<link rel="apple-touch-icon" href="icons/icon-192.svg">
+<link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css"/>
+<script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+<style>
+  @import url('https://fonts.googleapis.com/css2?family=Noto+Sans+KR:wght@300;400;500;700;900&display=swap');
+  * { margin:0; padding:0; box-sizing:border-box; }
+  body { font-family:'Noto Sans KR',sans-serif; background:linear-gradient(135deg,#0f0c29,#302b63,#24243e); color:#e0e0e0; min-height:100vh; }
+  .header { text-align:center; padding:30px 20px 10px; background:linear-gradient(135deg,rgba(15,12,41,0.9),rgba(48,43,99,0.9)); }
+  .header h1 { font-size:32px; font-weight:900; background:linear-gradient(90deg,#f093fb,#f5576c,#fda085); -webkit-background-clip:text; -webkit-text-fill-color:transparent; background-clip:text; letter-spacing:-1px; }
+  .header p { color:#aaa; font-size:13px; margin-top:4px; }
+  .tabs { display:flex; justify-content:center; gap:0; margin:20px auto 0; max-width:400px; }
+  .tab { flex:1; padding:14px 0; text-align:center; font-size:15px; font-weight:700; cursor:pointer; border:2px solid #444; transition:all 0.3s; user-select:none; }
+  .tab:first-child { border-radius:12px 0 0 12px; }
+  .tab:last-child { border-radius:0 12px 12px 0; }
+  .tab.active-travel { background:linear-gradient(135deg,#667eea,#764ba2); border-color:#764ba2; color:#fff; }
+  .tab.active-hiking { background:linear-gradient(135deg,#11998e,#38ef7d); border-color:#38ef7d; color:#fff; }
+  .tab:not([class*="active"]):hover { background:rgba(255,255,255,0.05); }
+  .tab .icon { font-size:20px; display:block; margin-bottom:2px; }
+  .container { max-width:1400px; margin:20px auto; padding:0 20px 40px; }
+  .panel { display:none; } .panel.active { display:block; }
+  .map-instruction { text-align:center; font-size:12px; color:#b8b8d0; margin-bottom:8px; padding:6px 12px; background:rgba(255,255,255,0.05); border-radius:8px; border:1px solid rgba(255,255,255,0.08); }
+  .map-instruction span { color:#f093fb; font-weight:600; }
+  .hiking .map-instruction span { color:#38ef7d; }
+  .map-wrap { border-radius:16px; overflow:hidden; box-shadow:0 8px 32px rgba(0,0,0,0.4); border:2px solid rgba(255,255,255,0.1); margin-bottom:20px; position:relative; }
+  .map { height:450px; width:100%; }
+  .map-legend { position:absolute; bottom:10px; right:10px; z-index:1000; background:rgba(15,12,41,0.9); padding:10px 14px; border-radius:8px; font-size:11px; border:1px solid rgba(255,255,255,0.15); backdrop-filter:blur(6px); }
+  .map-legend .leg-item { display:flex; align-items:center; gap:6px; margin:3px 0; }
+  .map-legend .leg-dot { width:12px; height:12px; border-radius:50%; border:2px solid; }
+  .content-row { display:flex; gap:20px; flex-wrap:wrap; }
+  .col-left { flex:1; min-width:320px; } .col-right { flex:1; min-width:320px; }
+  .card { background:rgba(255,255,255,0.06); backdrop-filter:blur(10px); border-radius:16px; padding:24px; margin-bottom:20px; border:1px solid rgba(255,255,255,0.08); box-shadow:0 4px 20px rgba(0,0,0,0.2); }
+  .card-title { font-size:16px; font-weight:700; margin-bottom:16px; display:flex; align-items:center; gap:8px; }
+  .card-title .dot { width:8px; height:8px; border-radius:50%; }
+  .travel .dot { background:linear-gradient(135deg,#667eea,#764ba2); }
+  .hiking .dot { background:linear-gradient(135deg,#11998e,#38ef7d); }
+  .form-row { display:flex; gap:10px; margin-bottom:10px; flex-wrap:wrap; }
+  .form-group { flex:1; min-width:120px; }
+  .form-group label { display:block; font-size:11px; color:#999; margin-bottom:4px; font-weight:500; }
+  .form-group input, .form-group select { width:100%; padding:10px 12px; background:rgba(255,255,255,0.08); border:1px solid rgba(255,255,255,0.15); border-radius:8px; color:#fff; font-size:14px; font-family:inherit; outline:none; transition:all 0.2s; }
+  .form-group input:focus, .form-group select:focus { border-color:#764ba2; background:rgba(255,255,255,0.12); }
+  .hiking .form-group input:focus, .hiking .form-group select:focus { border-color:#38ef7d; }
+  .form-group select option { background:#2a2a4a; color:#fff; }
+  .form-group input::placeholder { color:#666; }
+  .form-group select { cursor:pointer; }
+  .btn-add { width:100%; padding:12px; border:none; border-radius:10px; font-size:15px; font-weight:700; cursor:pointer; transition:all 0.3s; color:#fff; margin-top:6px; }
+  .travel .btn-add { background:linear-gradient(135deg,#667eea,#764ba2); }
+  .travel .btn-add:hover { transform:translateY(-2px); box-shadow:0 6px 20px rgba(118,75,162,0.4); }
+  .hiking .btn-add { background:linear-gradient(135deg,#11998e,#38ef7d); }
+  .hiking .btn-add:hover { transform:translateY(-2px); box-shadow:0 6px 20px rgba(56,239,125,0.3); }
+  .info-card { background:linear-gradient(135deg,rgba(102,126,234,0.15),rgba(118,75,162,0.15)); border-radius:16px; padding:24px; border:1px solid rgba(102,126,234,0.2); min-height:200px; transition:all 0.3s; }
+  .hiking .info-card { background:linear-gradient(135deg,rgba(17,153,142,0.15),rgba(56,239,125,0.15)); border-color:rgba(56,239,125,0.2); }
+  .info-card .info-title { font-size:20px; font-weight:900; margin-bottom:12px; }
+  .info-card .info-row { display:flex; justify-content:space-between; padding:8px 0; border-bottom:1px solid rgba(255,255,255,0.06); font-size:13px; }
+  .info-card .info-row .label { color:#aaa; min-width:60px; }
+  .info-card .info-row .value { font-weight:500; color:#fff; text-align:right; max-width:65%; }
+  .info-card .info-empty { color:#666; font-size:14px; text-align:center; padding:40px 0; }
+  .info-card .attractions { margin-top:12px; }
+  .info-card .attraction-tag { display:inline-block; padding:5px 12px; margin:3px; border-radius:20px; font-size:12px; background:rgba(255,255,255,0.08); border:1px solid rgba(255,255,255,0.12); }
+  .record-list { max-height:400px; overflow-y:auto; }
+  .record-list::-webkit-scrollbar { width:4px; }
+  .record-list::-webkit-scrollbar-thumb { background:rgba(255,255,255,0.15); border-radius:4px; }
+  .record-item { display:flex; align-items:center; gap:12px; padding:12px 14px; margin-bottom:8px; background:rgba(255,255,255,0.04); border-radius:10px; border:1px solid rgba(255,255,255,0.06); cursor:pointer; transition:all 0.2s; }
+  .record-item:hover { background:rgba(255,255,255,0.08); transform:translateX(4px); }
+  .record-item .flag { font-size:24px; }
+  .record-item .rec-info { flex:1; }
+  .record-item .rec-main { font-size:14px; font-weight:700; }
+  .record-item .rec-sub { font-size:11px; color:#999; margin-top:2px; }
+  .record-item .rec-date { font-size:11px; color:#888; white-space:nowrap; }
+  .record-item .btn-remove { width:24px; height:24px; border-radius:50%; border:none; background:rgba(255,82,82,0.2); color:#ff5252; font-size:14px; cursor:pointer; opacity:0; transition:opacity 0.2s; display:flex; align-items:center; justify-content:center; }
+  .record-item:hover .btn-remove { opacity:1; }
+  .stats { display:flex; gap:12px; margin-bottom:20px; flex-wrap:wrap; }
+  .stat-box { flex:1; min-width:100px; padding:16px; border-radius:12px; text-align:center; background:rgba(255,255,255,0.05); border:1px solid rgba(255,255,255,0.08); }
+  .stat-box .stat-num { font-size:28px; font-weight:900; }
+  .travel .stat-box .stat-num { background:linear-gradient(135deg,#667eea,#f093fb); -webkit-background-clip:text; -webkit-text-fill-color:transparent; background-clip:text; }
+  .hiking .stat-box .stat-num { background:linear-gradient(135deg,#11998e,#38ef7d); -webkit-background-clip:text; -webkit-text-fill-color:transparent; background-clip:text; }
+  .stat-box .stat-label { font-size:11px; color:#888; margin-top:4px; }
+  .custom-input-area { margin-top:10px; padding:12px; background:rgba(255,255,255,0.04); border-radius:10px; border:1px solid rgba(255,255,255,0.08); display:none; }
+  .custom-input-area.show { display:block; }
+  .custom-input-area .form-row { margin-bottom:6px; }
+  @keyframes pulse-marker {
+    0% { transform:scale(1); opacity:1; }
+    50% { transform:scale(1.4); opacity:0.6; }
+    100% { transform:scale(1); opacity:1; }
+  }
+  .pulse-icon { animation: pulse-marker 1.2s ease-in-out infinite; }
+  .leaflet-popup-content { font-family:'Noto Sans KR',sans-serif; }
+  .leaflet-popup-content b { font-size:14px; }
+  .map-click-popup .popup-btn { display:inline-block; margin-top:8px; padding:6px 16px; border:none; border-radius:6px; color:#fff; font-size:13px; font-weight:600; cursor:pointer; font-family:inherit; }
+  .map-click-popup .popup-btn.confirm { background:linear-gradient(135deg,#667eea,#764ba2); }
+  .map-click-popup .popup-btn.confirm-hike { background:linear-gradient(135deg,#11998e,#38ef7d); }
+  .map-click-popup .popup-btn.cancel { background:rgba(255,255,255,0.15); margin-left:6px; }
+  .map-click-popup input { width:100%; padding:6px 8px; margin-top:6px; background:rgba(0,0,0,0.3); border:1px solid rgba(255,255,255,0.2); border-radius:4px; color:#333; font-size:13px; font-family:inherit; }
+  @media(max-width:768px) { .content-row{flex-direction:column;} .map{height:300px;} .header h1{font-size:24px;} }
+</style>
+</head>
+<body>
+<div class="header">
+  <h1>My Travel & Hiking Checklist</h1>
+  <p>세계 여행과 등산 경험을 기록하고 지도에서 확인하세요</p>
+  <button id="installBtn" onclick="installApp()" style="display:none; margin-top:10px; padding:8px 20px; border:2px solid #f093fb; background:rgba(240,147,251,0.15); color:#f093fb; border-radius:20px; font-size:13px; font-weight:700; cursor:pointer; font-family:inherit;">&#128242; 앱 설치하기</button>
+</div>
+<div class="tabs">
+  <div class="tab active-travel" onclick="switchTab('travel')"><span class="icon">&#9992;</span> 세계여행</div>
+  <div class="tab" onclick="switchTab('hiking')"><span class="icon">&#9968;</span> 등산</div>
+</div>
+<div class="container">
+  <!-- 세계여행 -->
+  <div class="panel travel active" id="panelTravel">
+    <div class="stats">
+      <div class="stat-box"><div class="stat-num" id="tStatCountry">0</div><div class="stat-label">방문 국가</div></div>
+      <div class="stat-box"><div class="stat-num" id="tStatCity">0</div><div class="stat-label">방문 도시</div></div>
+      <div class="stat-box"><div class="stat-num" id="tStatTrips">0</div><div class="stat-label">총 기록</div></div>
+    </div>
+    <div class="map-instruction"><span>&#128205;</span> 지도를 클릭하여 직접 위치를 등록할 수 있습니다</div>
+    <div class="map-wrap">
+      <div class="map" id="travelMap"></div>
+      <div class="map-legend">
+        <div class="leg-item"><span class="leg-dot" style="background:#f093fb;border-color:#764ba2;"></span> 국가(수도)</div>
+        <div class="leg-item"><span class="leg-dot" style="background:#fda085;border-color:#f5576c;"></span> 방문 도시</div>
+      </div>
+    </div>
+    <div class="content-row">
+      <div class="col-left">
+        <div class="card">
+          <div class="card-title"><span class="dot"></span> 여행 기록 추가</div>
+          <div class="form-row">
+            <div class="form-group">
+              <label>나라</label>
+              <select id="tCountry" onchange="onCountryChange()">
+                <option value="">-- 나라 선택 --</option>
+              </select>
+            </div>
+            <div class="form-group">
+              <label>도시</label>
+              <select id="tCity">
+                <option value="">-- 나라를 먼저 선택 --</option>
+              </select>
+            </div>
+          </div>
+          <div class="form-row">
+            <div class="form-group">
+              <label>날짜</label>
+              <input type="date" id="tDate">
+            </div>
+          </div>
+          <button class="btn-add" onclick="addTravel()">+ 여행 기록 추가</button>
+        </div>
+        <div class="card">
+          <div class="card-title"><span class="dot"></span> 여행 기록 목록</div>
+          <div class="record-list" id="travelList"><div style="text-align:center;color:#666;padding:30px;">아직 기록이 없습니다</div></div>
+        </div>
+      </div>
+      <div class="col-right">
+        <div class="card">
+          <div class="card-title"><span class="dot"></span> 국가 정보</div>
+          <div class="info-card" id="travelInfo"><div class="info-empty">나라를 선택하면 정보가 표시됩니다</div></div>
+        </div>
+      </div>
+    </div>
+  </div>
+  <!-- 등산 -->
+  <div class="panel hiking" id="panelHiking">
+    <div class="stats">
+      <div class="stat-box"><div class="stat-num" id="hStatMt">0</div><div class="stat-label">등산한 산</div></div>
+      <div class="stat-box"><div class="stat-num" id="hStatMax">-</div><div class="stat-label">최고 높이(m)</div></div>
+      <div class="stat-box"><div class="stat-num" id="hStatTrips">0</div><div class="stat-label">총 기록</div></div>
+    </div>
+    <div class="map-instruction"><span>&#128205;</span> 지도를 클릭하여 직접 위치를 등록할 수 있습니다</div>
+    <div class="map-wrap">
+      <div class="map" id="hikingMap"></div>
+      <div class="map-legend">
+        <div class="leg-item"><span class="leg-dot" style="background:#38ef7d;border-color:#11998e;"></span> 등산 기록</div>
+        <div class="leg-item"><span class="leg-dot" style="background:#ffd700;border-color:#ff8c00;"></span> 클릭 위치</div>
+      </div>
+    </div>
+    <div class="content-row">
+      <div class="col-left">
+        <div class="card">
+          <div class="card-title"><span class="dot"></span> 등산 기록 추가</div>
+          <div class="form-row">
+            <div class="form-group">
+              <label>지역</label>
+              <select id="hRegion" onchange="filterMountains()">
+                <option value="">전체</option>
+                <option value="서울">서울</option><option value="경기">경기</option><option value="인천">인천</option>
+                <option value="강원">강원</option><option value="충북">충북</option><option value="충남">충남</option>
+                <option value="대전">대전</option><option value="세종">세종</option>
+                <option value="전북">전북</option><option value="전남">전남</option><option value="광주">광주</option>
+                <option value="경북">경북</option><option value="경남">경남</option><option value="대구">대구</option>
+                <option value="부산">부산</option><option value="울산">울산</option><option value="제주">제주</option>
+              </select>
+            </div>
+            <div class="form-group" style="flex:2;">
+              <label>산 이름</label>
+              <select id="hMountain" onchange="onMountainChange()">
+                <option value="">-- 산 선택 --</option>
+              </select>
+            </div>
+          </div>
+          <div class="custom-input-area" id="customMtArea">
+            <div class="form-row">
+              <div class="form-group"><label>산 이름</label><input type="text" id="customMtName" placeholder="예: 무명산"></div>
+              <div class="form-group"><label>지역</label><input type="text" id="customMtRegion" placeholder="예: 경기"></div>
+              <div class="form-group"><label>높이(m)</label><input type="number" id="customMtHeight" placeholder="예: 500"></div>
+            </div>
+          </div>
+          <div class="form-row">
+            <div class="form-group"><label>날짜</label><input type="date" id="hDate"></div>
+          </div>
+          <button class="btn-add" onclick="addHiking()">+ 등산 기록 추가</button>
+        </div>
+        <div class="card">
+          <div class="card-title"><span class="dot"></span> 등산 기록 목록</div>
+          <div class="record-list" id="hikingList"><div style="text-align:center;color:#666;padding:30px;">아직 기록이 없습니다</div></div>
+        </div>
+      </div>
+      <div class="col-right">
+        <div class="card">
+          <div class="card-title"><span class="dot"></span> 산 정보</div>
+          <div class="info-card" id="hikingInfo"><div class="info-empty">산을 선택하면 정보가 표시됩니다</div></div>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<script>
+// =============================================
+// 국가 데이터
+// =============================================
+const COUNTRIES = {
+  "대한민국":{flag:"\u{1F1F0}\u{1F1F7}",lat:37.5665,lng:126.978,area:"100,210",pop:"5,178만",capital:"서울",lang:"한국어",currency:"원(KRW)",attractions:["경복궁","제주도","부산 해운대","설악산","안동 하회마을","전주 한옥마을","남산타워","DMZ"],
+    cities:{"서울":[37.5665,126.978],"부산":[35.1796,129.0756],"제주":[33.4996,126.5312],"인천":[37.4563,126.7052],"대구":[35.8714,128.6014],"광주":[35.1595,126.8526],"대전":[36.3504,127.3845],"경주":[35.8562,129.2247],"전주":[35.8242,127.148],"강릉":[37.7519,128.8761],"속초":[38.207,128.5918],"여수":[34.7604,127.6622]}},
+  "일본":{flag:"\u{1F1EF}\u{1F1F5}",lat:35.6762,lng:139.6503,area:"377,975",pop:"1억 2,500만",capital:"도쿄",lang:"일본어",currency:"엔(JPY)",attractions:["후지산","교토 금각사","오사카성","도쿄타워","시부야","나라공원","히로시마 평화공원","오키나와"],
+    cities:{"도쿄":[35.6762,139.6503],"오사카":[34.6937,135.5023],"교토":[35.0116,135.7681],"후쿠오카":[33.5904,130.4017],"삿포로":[43.0618,141.3545],"나고야":[35.1815,136.9066],"요코하마":[35.4437,139.638],"나라":[34.685,135.8048],"히로시마":[34.3853,132.4553],"오키나와":[26.3344,127.8056]}},
+  "중국":{flag:"\u{1F1E8}\u{1F1F3}",lat:39.9042,lng:116.4074,area:"9,596,961",pop:"14억 2,600만",capital:"베이징",lang:"중국어",currency:"위안(CNY)",attractions:["만리장성","자금성","병마용","황산","구채구","상하이 와이탄","장가계","티벳"],
+    cities:{"베이징":[39.9042,116.4074],"상하이":[31.2304,121.4737],"시안":[34.3416,108.9398],"광저우":[23.1291,113.2644],"청두":[30.5728,104.0668],"항저우":[30.2741,120.1551],"구이린":[25.2744,110.299],"장가계":[29.1169,110.4794],"하얼빈":[45.8038,126.535],"선전":[22.5431,114.0579]}},
+  "미국":{flag:"\u{1F1FA}\u{1F1F8}",lat:38.9072,lng:-77.0369,area:"9,833,520",pop:"3억 3,100만",capital:"워싱턴 D.C.",lang:"영어",currency:"달러(USD)",attractions:["그랜드캐니언","자유의여신상","타임스퀘어","금문교","하와이","옐로스톤","라스베이거스","디즈니월드"],
+    cities:{"뉴욕":[40.7128,-74.006],"로스앤젤레스":[34.0522,-118.2437],"샌프란시스코":[37.7749,-122.4194],"라스베이거스":[36.1699,-115.1398],"워싱턴 D.C.":[38.9072,-77.0369],"시카고":[41.8781,-87.6298],"마이애미":[25.7617,-80.1918],"하와이(호놀룰루)":[21.3069,-157.8583],"시애틀":[47.6062,-122.3321],"보스턴":[42.3601,-71.0589]}},
+  "프랑스":{flag:"\u{1F1EB}\u{1F1F7}",lat:48.8566,lng:2.3522,area:"643,801",pop:"6,750만",capital:"파리",lang:"프랑스어",currency:"유로(EUR)",attractions:["에펠탑","루브르박물관","베르사유궁전","몽생미셸","프로방스","니스","샹젤리제","노트르담대성당"],
+    cities:{"파리":[48.8566,2.3522],"니스":[43.7102,7.262],"리옹":[45.764,4.8357],"마르세유":[43.2965,5.3698],"보르도":[44.8378,-0.5792],"스트라스부르":[48.5734,7.7521],"몽생미셸":[48.636,-1.5115],"칸":[43.5528,7.0174]}},
+  "영국":{flag:"\u{1F1EC}\u{1F1E7}",lat:51.5074,lng:-0.1278,area:"243,610",pop:"6,700만",capital:"런던",lang:"영어",currency:"파운드(GBP)",attractions:["빅벤","버킹엄궁전","대영박물관","타워브리지","스톤헨지","에든버러성","코츠월드","바스"],
+    cities:{"런던":[51.5074,-0.1278],"에든버러":[55.9533,-3.1883],"맨체스터":[53.4808,-2.2426],"리버풀":[53.4084,-2.9916],"옥스퍼드":[51.752,-1.2577],"캠브리지":[52.2053,0.1218],"바스":[51.3811,-2.359],"요크":[53.9591,-1.0815]}},
+  "독일":{flag:"\u{1F1E9}\u{1F1EA}",lat:52.52,lng:13.405,area:"357,022",pop:"8,320만",capital:"베를린",lang:"독일어",currency:"유로(EUR)",attractions:["브란덴부르크문","노이슈반슈타인성","쾰른대성당","뮌헨","하이델베르크","로맨틱가도","베를린장벽","드레스덴"],
+    cities:{"베를린":[52.52,13.405],"뮌헨":[48.1351,11.582],"프랑크푸르트":[50.1109,8.6821],"쾰른":[50.9375,6.9603],"함부르크":[53.5511,9.9937],"하이델베르크":[49.3988,8.6724],"드레스덴":[51.0504,13.7373],"뉘른베르크":[49.4521,11.0767]}},
+  "이탈리아":{flag:"\u{1F1EE}\u{1F1F9}",lat:41.9028,lng:12.4964,area:"301,340",pop:"6,040만",capital:"로마",lang:"이탈리아어",currency:"유로(EUR)",attractions:["콜로세움","베네치아","피사의사탑","바티칸","피렌체","아말피해안","밀라노대성당","폼페이"],
+    cities:{"로마":[41.9028,12.4964],"베네치아":[45.4408,12.3155],"피렌체":[43.7696,11.2558],"밀라노":[45.4642,9.19],"나폴리":[40.8518,14.2681],"아말피":[40.634,14.6027],"피사":[43.7228,10.4017],"시에나":[43.3188,11.3308]}},
+  "스페인":{flag:"\u{1F1EA}\u{1F1F8}",lat:40.4168,lng:-3.7038,area:"505,990",pop:"4,730만",capital:"마드리드",lang:"스페인어",currency:"유로(EUR)",attractions:["사그라다파밀리아","알함브라궁전","마드리드왕궁","바르셀로나","세비야","톨레도","그라나다","산티아고순례길"],
+    cities:{"마드리드":[40.4168,-3.7038],"바르셀로나":[41.3874,2.1686],"세비야":[37.3891,-5.9845],"그라나다":[37.1773,-3.5986],"발렌시아":[39.4699,-0.3763],"톨레도":[39.8628,-4.0273],"빌바오":[43.263,-2.935],"말라가":[36.7213,-4.4214]}},
+  "태국":{flag:"\u{1F1F9}\u{1F1ED}",lat:13.7563,lng:100.5018,area:"513,120",pop:"7,000만",capital:"방콕",lang:"태국어",currency:"바트(THB)",attractions:["왓프라깨우","치앙마이","푸켓","파타야","아유타야","카오산로드","코사무이","왕궁"],
+    cities:{"방콕":[13.7563,100.5018],"치앙마이":[18.7883,98.9853],"푸켓":[7.8804,98.3923],"파타야":[12.9236,100.8825],"코사무이":[9.512,100.0134],"아유타야":[14.3692,100.5877],"끄라비":[8.0863,98.9063],"치앙라이":[19.9105,99.8406]}},
+  "베트남":{flag:"\u{1F1FB}\u{1F1F3}",lat:21.0278,lng:105.8342,area:"331,212",pop:"9,950만",capital:"하노이",lang:"베트남어",currency:"동(VND)",attractions:["하롱베이","호이안","호치민시","사파","다낭","메콩델타","후에왕궁","닌빈"],
+    cities:{"하노이":[21.0278,105.8342],"호치민":[10.8231,106.6297],"다낭":[16.0544,108.2022],"호이안":[15.8801,108.338],"사파":[22.3363,103.8438],"닌빈":[20.2539,105.975],"후에":[16.4637,107.5909],"나트랑":[12.2388,109.1967]}},
+  "호주":{flag:"\u{1F1E6}\u{1F1FA}",lat:-33.8688,lng:151.2093,area:"7,692,024",pop:"2,600만",capital:"캔버라",lang:"영어",currency:"달러(AUD)",attractions:["시드니오페라하우스","그레이트배리어리프","울루루","멜버른","골드코스트","블루마운틴","태즈매니아","그레이트오션로드"],
+    cities:{"시드니":[-33.8688,151.2093],"멜버른":[-37.8136,144.9631],"브리즈번":[-27.4705,153.026],"퍼스":[-31.9505,115.8605],"케언즈":[-16.9186,145.7781],"골드코스트":[-28.0167,153.4],"캔버라":[-35.2809,149.13],"애들레이드":[-34.9285,138.6007]}},
+  "캐나다":{flag:"\u{1F1E8}\u{1F1E6}",lat:45.4215,lng:-75.6972,area:"9,984,670",pop:"3,900만",capital:"오타와",lang:"영어/프랑스어",currency:"달러(CAD)",attractions:["나이아가라폭포","밴프국립공원","토론토CN타워","퀘벡시티","로키산맥","빅토리아","몬트리올","옐로나이프오로라"],
+    cities:{"토론토":[43.6532,-79.3832],"밴쿠버":[49.2827,-123.1207],"몬트리올":[45.5017,-73.5673],"퀘벡시티":[46.8139,-71.208],"오타와":[45.4215,-75.6972],"밴프":[51.1784,-115.5708],"옐로나이프":[62.454,-114.3718],"빅토리아":[48.4284,-123.3656]}},
+  "브라질":{flag:"\u{1F1E7}\u{1F1F7}",lat:-22.9068,lng:-43.1729,area:"8,515,767",pop:"2억 1,400만",capital:"브라질리아",lang:"포르투갈어",currency:"헤알(BRL)",attractions:["예수상","이과수폭포","코파카바나","아마존","슈가로프산","살바도르","상파울루","판타날습지"],
+    cities:{"리우데자네이루":[-22.9068,-43.1729],"상파울루":[-23.5505,-46.6333],"브라질리아":[-15.7975,-47.8919],"살바도르":[-12.9714,-38.5124],"이과수":[-25.5163,-54.5854],"마나우스":[-3.119,-60.0217]}},
+  "인도":{flag:"\u{1F1EE}\u{1F1F3}",lat:28.6139,lng:77.209,area:"3,287,263",pop:"14억 2,800만",capital:"뉴델리",lang:"힌디어/영어",currency:"루피(INR)",attractions:["타지마할","갠지스강","자이푸르","고아","케랄라","뭄바이","바라나시","라자스탄"],
+    cities:{"뉴델리":[28.6139,77.209],"뭄바이":[19.076,72.8777],"아그라":[27.1767,78.0081],"자이푸르":[26.9124,75.7873],"바라나시":[25.3176,82.9739],"고아":[15.2993,74.124],"콜카타":[22.5726,88.3639],"첸나이":[13.0827,80.2707]}},
+  "터키":{flag:"\u{1F1F9}\u{1F1F7}",lat:41.0082,lng:28.9784,area:"783,562",pop:"8,530만",capital:"앙카라",lang:"터키어",currency:"리라(TRY)",attractions:["아야소피아","카파도키아","파묵칼레","블루모스크","에페소스","그랜드바자르","트로이","안탈리아"],
+    cities:{"이스탄불":[41.0082,28.9784],"앙카라":[39.9334,32.8597],"카파도키아":[38.6431,34.8289],"안탈리아":[36.8969,30.7133],"이즈미르":[38.4237,27.1428],"파묵칼레":[37.9204,29.1187],"에페소스":[37.9411,27.3419],"보드룸":[37.0344,27.4305]}},
+  "이집트":{flag:"\u{1F1EA}\u{1F1EC}",lat:30.0444,lng:31.2357,area:"1,001,449",pop:"1억 400만",capital:"카이로",lang:"아랍어",currency:"파운드(EGP)",attractions:["피라미드","스핑크스","룩소르신전","카르나크신전","아부심벨","나일강크루즈","알렉산드리아","홍해"],
+    cities:{"카이로":[30.0444,31.2357],"룩소르":[25.6872,32.6396],"아스완":[24.0889,32.8998],"알렉산드리아":[31.2001,29.9187],"후르가다":[27.2579,33.8116],"샤름엘셰이크":[27.9158,34.33]}},
+  "스위스":{flag:"\u{1F1E8}\u{1F1ED}",lat:46.9481,lng:7.4474,area:"41,285",pop:"870만",capital:"베른",lang:"독일어/프랑스어/이탈리아어",currency:"프랑(CHF)",attractions:["마터호른","인터라켄","루체른","융프라우","제네바","취리히","그린델발트","라인폭포"],
+    cities:{"취리히":[47.3769,8.5417],"제네바":[46.2044,6.1432],"베른":[46.9481,7.4474],"인터라켄":[46.6863,7.8632],"루체른":[47.0502,8.3093],"체르마트":[46.0207,7.7491],"그린델발트":[46.6243,8.0413],"로잔":[46.5197,6.6323]}},
+  "그리스":{flag:"\u{1F1EC}\u{1F1F7}",lat:37.9838,lng:23.7275,area:"131,957",pop:"1,060만",capital:"아테네",lang:"그리스어",currency:"유로(EUR)",attractions:["파르테논신전","산토리니","미코노스","델피","크레타","메테오라","올림피아","코르푸"],
+    cities:{"아테네":[37.9838,23.7275],"산토리니":[36.3932,25.4615],"미코노스":[37.4467,25.3289],"크레타":[35.2401,24.4709],"테살로니키":[40.6401,22.9444],"메테오라":[39.7217,21.6307],"로도스":[36.4341,28.2176]}},
+  "멕시코":{flag:"\u{1F1F2}\u{1F1FD}",lat:19.4326,lng:-99.1332,area:"1,964,375",pop:"1억 2,900만",capital:"멕시코시티",lang:"스페인어",currency:"페소(MXN)",attractions:["치첸이트사","칸쿤","테오티우아칸","멕시코시티","과나후아토","코수멜","오악사카","룸피아스폭포"],
+    cities:{"멕시코시티":[19.4326,-99.1332],"칸쿤":[21.1619,-86.8515],"과나후아토":[21.019,-101.2574],"오악사카":[17.0732,-96.7266],"플라야델카르멘":[20.6296,-87.0739],"산미겔데아옌데":[20.9144,-100.7452]}},
+  "싱가포르":{flag:"\u{1F1F8}\u{1F1EC}",lat:1.3521,lng:103.8198,area:"728",pop:"564만",capital:"싱가포르",lang:"영어/말레이어/중국어/타밀어",currency:"달러(SGD)",attractions:["마리나베이샌즈","가든스바이더베이","센토사섬","머라이언파크","오차드로드","차이나타운","리틀인디아","싱가포르동물원"],
+    cities:{"싱가포르":[1.3521,103.8198]}},
+  "뉴질랜드":{flag:"\u{1F1F3}\u{1F1FF}",lat:-41.2865,lng:174.7762,area:"268,021",pop:"510만",capital:"웰링턴",lang:"영어/마오리어",currency:"달러(NZD)",attractions:["밀포드사운드","퀸스타운","와이토모동굴","통가리로","호비튼","로토루아","마운트쿡","테카포호수"],
+    cities:{"오클랜드":[-36.8485,174.7633],"퀸스타운":[-45.0312,168.6626],"웰링턴":[-41.2865,174.7762],"크라이스트처치":[-43.5321,172.6362],"로토루아":[-38.1368,176.2497],"테카포":[-44.0047,170.4772]}},
+  "필리핀":{flag:"\u{1F1F5}\u{1F1ED}",lat:14.5995,lng:120.9842,area:"300,000",pop:"1억 1,400만",capital:"마닐라",lang:"필리핀어/영어",currency:"페소(PHP)",attractions:["보라카이","팔라완","세부","초콜릿힐","마닐라","보홀","시아르가오","마욘화산"],
+    cities:{"마닐라":[14.5995,120.9842],"세부":[10.3157,123.8854],"보라카이":[11.9674,121.9248],"팔라완":[9.8349,118.7384],"보홀":[9.84,124.0],"시아르가오":[9.8482,126.0458]}},
+  "말레이시아":{flag:"\u{1F1F2}\u{1F1FE}",lat:3.139,lng:101.6869,area:"329,847",pop:"3,300만",capital:"쿠알라룸푸르",lang:"말레이어",currency:"링깃(MYR)",attractions:["페트로나스트윈타워","랑카위","코타키나발루","말라카","페낭","캐머런하이랜드","바투동굴","보르네오"],
+    cities:{"쿠알라룸푸르":[3.139,101.6869],"랑카위":[6.35,99.8],"코타키나발루":[5.9804,116.0735],"페낭":[5.4141,100.3288],"말라카":[2.1896,102.2501],"조호르바루":[1.4927,103.7414]}},
+  "인도네시아":{flag:"\u{1F1EE}\u{1F1E9}",lat:-8.3405,lng:115.092,area:"1,904,569",pop:"2억 7,800만",capital:"자카르타",lang:"인도네시아어",currency:"루피아(IDR)",attractions:["발리","보로부두르","코모도섬","족자카르타","자카르타","롬복","라자암팟","브로모화산"],
+    cities:{"발리":[-8.3405,115.092],"자카르타":[-6.2088,106.8456],"족자카르타":[-7.7956,110.3695],"롬복":[-8.65,116.3249],"라자암팟":[-0.2348,130.5188],"수라바야":[-7.2575,112.7521]}},
+  "러시아":{flag:"\u{1F1F7}\u{1F1FA}",lat:55.7558,lng:37.6173,area:"17,098,242",pop:"1억 4,400만",capital:"모스크바",lang:"러시아어",currency:"루블(RUB)",attractions:["크렘린궁","붉은광장","에르미타주박물관","바이칼호","상트페테르부르크","시베리아횡단열차","볼쇼이극장","캄차카"],
+    cities:{"모스크바":[55.7558,37.6173],"상트페테르부르크":[59.9343,30.3351],"이르쿠츠크":[52.2978,104.2964],"블라디보스토크":[43.1332,131.9113],"소치":[43.6028,39.7342],"카잔":[55.7963,49.1089]}},
+  "남아프리카공화국":{flag:"\u{1F1FF}\u{1F1E6}",lat:-33.9249,lng:18.4241,area:"1,221,037",pop:"6,000만",capital:"프리토리아",lang:"영어 외 10개",currency:"랜드(ZAR)",attractions:["테이블마운틴","케이프타운","크루거국립공원","가든루트","희망봉","요하네스버그","더반","스텔렌보스"],
+    cities:{"케이프타운":[-33.9249,18.4241],"요하네스버그":[-26.2041,28.0473],"더반":[-29.8587,31.0218],"프리토리아":[-25.7479,28.2293],"스텔렌보스":[-33.9322,18.8602]}},
+  "포르투갈":{flag:"\u{1F1F5}\u{1F1F9}",lat:38.7223,lng:-9.1393,area:"92,212",pop:"1,030만",capital:"리스본",lang:"포르투갈어",currency:"유로(EUR)",attractions:["리스본","포르투","신트라궁전","벨렘탑","알가르브","마데이라섬","코임브라","파티마"],
+    cities:{"리스본":[38.7223,-9.1393],"포르투":[41.1579,-8.6291],"신트라":[38.7981,-9.3882],"알가르브":[37.0179,-7.9304],"코임브라":[40.2033,-8.4103]}},
+  "체코":{flag:"\u{1F1E8}\u{1F1FF}",lat:50.0755,lng:14.4378,area:"78,866",pop:"1,080만",capital:"프라하",lang:"체코어",currency:"코루나(CZK)",attractions:["프라하성","카를교","구시가광장","체스키크룸로프","쿠트나호라","카를로비바리","브르노","천문시계"],
+    cities:{"프라하":[50.0755,14.4378],"체스키크룸로프":[48.8127,14.3175],"브르노":[49.1951,16.6068],"카를로비바리":[50.2325,12.8713],"쿠트나호라":[49.9481,15.2688]}},
+  "크로아티아":{flag:"\u{1F1ED}\u{1F1F7}",lat:43.5081,lng:16.4402,area:"56,594",pop:"390만",capital:"자그레브",lang:"크로아티아어",currency:"유로(EUR)",attractions:["두브로브니크","플리트비체호수","스플리트","자다르","흐바르섬","자그레브","트로기르","디오클레티안궁전"],
+    cities:{"두브로브니크":[42.6507,18.0944],"스플리트":[43.5081,16.4402],"자그레브":[45.815,15.9819],"플리트비체":[44.8654,15.582],"자다르":[44.1194,15.2314]}},
+  "아이슬란드":{flag:"\u{1F1EE}\u{1F1F8}",lat:64.1466,lng:-21.9426,area:"103,000",pop:"37만",capital:"레이캬비크",lang:"아이슬란드어",currency:"크로나(ISK)",attractions:["골든서클","블루라군","요쿨살론빙하호","레이캬비크","스나이펠스네스","셀랴란드포스","비크","오로라"],
+    cities:{"레이캬비크":[64.1466,-21.9426],"비크":[63.4186,-19.006],"아쿠레이리":[65.6835,-18.0878],"후사비크":[66.0449,-17.3389]}},
+  "페루":{flag:"\u{1F1F5}\u{1F1EA}",lat:-13.1631,lng:-72.545,area:"1,285,216",pop:"3,350만",capital:"리마",lang:"스페인어",currency:"솔(PEN)",attractions:["마추픽추","쿠스코","나스카라인","리마","티티카카호수","레인보우마운틴","콜카캐니언","아마존"],
+    cities:{"리마":[-12.0464,-77.0428],"쿠스코":[-13.532,-71.9675],"마추픽추":[-13.1631,-72.545],"아레키파":[-16.409,-71.5375],"푸노":[-15.8402,-70.0219]}},
+  "캄보디아":{flag:"\u{1F1F0}\u{1F1ED}",lat:13.4125,lng:103.867,area:"181,035",pop:"1,700만",capital:"프놈펜",lang:"크메르어",currency:"리엘(KHR)",attractions:["앙코르와트","프놈펜왕궁","시엠립","바이욘사원","톤레삽호수","킬링필드","시아누크빌","반테이스레이"],
+    cities:{"시엠립":[13.3671,103.8448],"프놈펜":[11.5564,104.9282],"시아누크빌":[10.6093,103.5229],"바탐방":[13.0957,103.2022]}},
+  "대만":{flag:"\u{1F1F9}\u{1F1FC}",lat:25.033,lng:121.5654,area:"36,193",pop:"2,340만",capital:"타이베이",lang:"중국어",currency:"달러(TWD)",attractions:["타이베이101","지우펀","타로코협곡","일월담","스린야시장","아리산","단수이","예류지질공원"],
+    cities:{"타이베이":[25.033,121.5654],"가오슝":[22.6273,120.3014],"타이중":[24.1477,120.6736],"화롄":[23.991,121.6011],"지우펀":[25.1092,121.8443],"타이난":[22.9998,120.2269]}},
+  "몽골":{flag:"\u{1F1F2}\u{1F1F3}",lat:47.8864,lng:106.9057,area:"1,564,116",pop:"340만",capital:"울란바토르",lang:"몽골어",currency:"투그릭(MNT)",attractions:["고비사막","테를지국립공원","울란바토르","칭기즈칸동상","오르혼계곡","쿠브스굴호수","엘센타사르하이","게르체험"],
+    cities:{"울란바토르":[47.8864,106.9057],"테를지":[47.8,107.4],"카라코룸":[47.1977,102.8217],"고비":[43.5,105.0]}},
+  "네팔":{flag:"\u{1F1F3}\u{1F1F5}",lat:27.7172,lng:85.324,area:"147,181",pop:"3,010만",capital:"카트만두",lang:"네팔어",currency:"루피(NPR)",attractions:["에베레스트","카트만두","포카라","안나푸르나","룸비니","치트완국립공원","나가르코트","파탄"],
+    cities:{"카트만두":[27.7172,85.324],"포카라":[28.2096,83.9856],"룸비니":[27.4833,83.2767],"치트완":[27.5291,84.3542],"나가르코트":[27.7172,85.5169]}},
+  "모로코":{flag:"\u{1F1F2}\u{1F1E6}",lat:33.9716,lng:-6.8498,area:"446,550",pop:"3,700만",capital:"라바트",lang:"아랍어/베르베르어",currency:"디르함(MAD)",attractions:["마라케시","페스메디나","사하라사막","셰프샤우엔","카사블랑카","아이트벤하두","에사우이라","아틀라스산맥"],
+    cities:{"마라케시":[31.6295,-7.9811],"페스":[34.0181,-5.0078],"카사블랑카":[33.5731,-7.5898],"셰프샤우엔":[35.1688,-5.2636],"라바트":[33.9716,-6.8498],"메르주가":[31.0802,-4.0135]}},
+  "헝가리":{flag:"\u{1F1ED}\u{1F1FA}",lat:47.4979,lng:19.0402,area:"93,028",pop:"970만",capital:"부다페스트",lang:"헝가리어",currency:"포린트(HUF)",attractions:["부다성","어부의요새","국회의사당","세체니온천","다뉴브강야경","겔레르트언덕","마차시성당","센텐드레"],
+    cities:{"부다페스트":[47.4979,19.0402],"센텐드레":[47.6693,19.0736],"에게르":[47.9025,20.3772],"페치":[46.0727,18.2323]}},
+  "오스트리아":{flag:"\u{1F1E6}\u{1F1F9}",lat:48.2082,lng:16.3738,area:"83,879",pop:"900만",capital:"비엔나",lang:"독일어",currency:"유로(EUR)",attractions:["쇤브룬궁전","할슈타트","잘츠부르크","비엔나오페라","인스브루크","벨베데레궁전","그로스글로크너","멜크수도원"],
+    cities:{"비엔나":[48.2082,16.3738],"잘츠부르크":[47.8095,13.055],"인스브루크":[47.2692,11.4041],"할슈타트":[47.5622,13.6493],"그라츠":[47.0707,15.4395]}},
+};
+
+// =============================================
+// 한국 산 데이터 (80+ mountains)
+// =============================================
+const MOUNTAINS = {
+  // 서울
+  "북한산":{region:"서울",height:836,lat:37.6584,lng:126.9784,desc:"서울 도심에 인접한 국립공원. 화강암 봉우리가 특징",features:["백운대","인수봉","만경대","북한산성","우이령길"]},
+  "관악산":{region:"서울",height:632,lat:37.4433,lng:126.9638,desc:"서울대 뒷산. 연주대에서 서울시내 조망이 탁월",features:["연주대","서울대코스","사당코스","낙성대코스","연주암"]},
+  "도봉산":{region:"서울",height:740,lat:37.6953,lng:127.0159,desc:"서울 북부의 명산. 기암괴석과 다양한 등산코스",features:["자운봉","만장봉","선인봉","도봉서원","천축사"]},
+  "수락산":{region:"서울",height:638,lat:37.6872,lng:127.0714,desc:"노원구와 의정부에 걸친 산. 기암괴석이 특징",features:["주봉","기차바위","코끼리바위","내원암","철모바위"]},
+  "아차산":{region:"서울",height:287,lat:37.5717,lng:127.1039,desc:"광진구의 산. 서울 한강과 도심 조망이 좋은 가벼운 산행지",features:["해맞이봉","고구려보루","아차산생태공원","워커힐조망","용마산연결"]},
+  "인왕산":{region:"서울",height:338,lat:37.5833,lng:126.9583,desc:"서울 도심의 바위산. 경복궁과 도심 조망이 뛰어남",features:["정상바위","선바위","범바위","인왕사","성곽길"]},
+  "남산":{region:"서울",height:262,lat:37.5512,lng:126.9882,desc:"서울의 상징. N서울타워가 위치한 도심 속 산",features:["N서울타워","남산순환로","봉수대","한양도성","남산케이블카"]},
+  "청계산(서울)":{region:"서울",height:618,lat:37.4283,lng:127.0548,desc:"서초구와 성남시에 걸친 산. 서울 강남권의 대표 등산코스",features:["매봉","옥녀봉","이수봉","원터골코스","매바위"]},
+  // 경기
+  "천마산":{region:"경기",height:812,lat:37.5817,lng:127.3269,desc:"남양주의 진산. 서울에서 가까운 등산명소",features:["정상","철쭉동산","만경봉","호평코스","마치리코스"]},
+  "명지산":{region:"경기",height:1267,lat:37.9728,lng:127.3856,desc:"가평의 최고봉. 가을 억새와 단풍이 유명",features:["정상","익근리코스","승천사코스","억새평원","명지폭포"]},
+  "감악산":{region:"경기",height:675,lat:37.975,lng:126.9542,desc:"파주/양주에 걸친 산. 임꺽정전설의 산",features:["정상","운계폭포","감악사","임꺽정봉","범륜사"]},
+  "용문산":{region:"경기",height:1157,lat:37.5503,lng:127.5503,desc:"용문사 은행나무(천연기념물)가 유명",features:["정상","용문사","은행나무","미지산코스","용계계곡"]},
+  "화악산":{region:"경기",height:1468,lat:37.9861,lng:127.5103,desc:"경기도 최고봉. 가평에 위치한 깊은 산",features:["정상","중봉","화악터널","응봉","석룡산"]},
+  "축령산":{region:"경기",height:879,lat:37.7369,lng:127.3267,desc:"남양주 축령산. 울창한 잣나무숲이 유명",features:["정상","축령산자연휴양림","잣나무숲길","서리산연결","봉선사"]},
+  "소요산":{region:"경기",height:587,lat:37.9311,lng:127.0753,desc:"동두천의 명산. 자재암과 폭포가 아름다움",features:["의상대","자재암","일주문","하백운대","선녀탕"]},
+  "운악산":{region:"경기",height:936,lat:37.8833,lng:127.2833,desc:"포천의 소금강. 기암절벽과 폭포가 장관",features:["망경대","미륵바위","눈썹바위","운악산폭포","기차바위"]},
+  "유명산":{region:"경기",height:862,lat:37.5417,lng:127.5833,desc:"가평의 산. 가을 억새와 계곡이 아름다움",features:["정상","억새밭","유명산자연휴양림","입석","마당바위"]},
+  "광교산":{region:"경기",height:582,lat:37.3028,lng:127.0181,desc:"수원과 용인에 걸친 산. 도심 근교 산행지",features:["시루봉","비로봉","광교호수공원","수원팔경","형제봉"]},
+  "수리산":{region:"경기",height:475,lat:37.3761,lng:126.9242,desc:"안양과 군포에 걸친 산. 수도권 가벼운 산행지",features:["태을봉","슬기봉","관모봉","병목안시민공원","수리사"]},
+  "청계산(경기)":{region:"경기",height:618,lat:37.4283,lng:127.0548,desc:"성남시와 과천시에 걸친 산. 수도권 대표 등산코스",features:["매봉","옥녀봉","이수봉","혈읍재","원터골"]},
+  // 인천
+  "마니산":{region:"인천",height:469,lat:37.6108,lng:126.4328,desc:"강화도의 명산. 단군 제천단인 참성단이 정상에 위치",features:["참성단","정족산성","삼랑성","계단로","함허동천"]},
+  "문학산":{region:"인천",height:217,lat:37.4317,lng:126.6867,desc:"인천의 진산. 문학산성과 도시 조망이 좋음",features:["정상","문학산성","인천도시조망","둘레길","고인돌"]},
+  // 강원
+  "설악산":{region:"강원",height:1708,lat:38.119,lng:128.4656,desc:"유네스코 생물권보전지역. 기암괴석과 단풍이 아름다운 명산",features:["대청봉","울산바위","흔들바위","비룡폭포","공룡능선","천불동계곡"]},
+  "오대산":{region:"강원",height:1563,lat:37.7981,lng:128.5431,desc:"월정사와 상원사 등 불교문화의 보고. 전나무숲이 유명",features:["비로봉","월정사","상원사","전나무숲","소금강"]},
+  "태백산":{region:"강원",height:1567,lat:37.0937,lng:128.9156,desc:"민족의 영산. 매년 태백산눈축제가 열리며 천제단이 정상에 위치",features:["천제단","당골광장","유일사코스","눈축제","주목군락"]},
+  "치악산":{region:"강원",height:1288,lat:37.3706,lng:128.0553,desc:"꿩과 은혜갚은 까치 전설의 산. 가을 단풍이 아름다움",features:["비로봉","구룡사","구룡폭포","상원사","세렴폭포"]},
+  "가리왕산":{region:"강원",height:1561,lat:37.4611,lng:128.5633,desc:"원시림이 보존된 명산. 활엽수림이 아름다움",features:["정상","장구목이골","회동계곡","원시림","야생화"]},
+  "두타산":{region:"강원",height:1353,lat:37.2506,lng:129.0486,desc:"무릉계곡과 베틀바위 등 비경이 숨겨진 산",features:["두타산성","무릉계곡","베틀바위","용추폭포","쌍폭"]},
+  "삼악산":{region:"강원",height:654,lat:37.8644,lng:127.7242,desc:"춘천의 명산. 암릉코스가 스릴있어 인기",features:["용화봉","등선폭포","암릉코스","상원사","의암호조망"]},
+  "점봉산":{region:"강원",height:1424,lat:38.0361,lng:128.4222,desc:"설악산 남쪽의 산. 곰배령 야생화 군락지로 유명",features:["정상","곰배령","야생화군락","원시림","한계령"]},
+  "방태산":{region:"강원",height:1444,lat:37.9253,lng:128.3514,desc:"인제의 깊은 산. 주목군락과 적가리골이 유명",features:["정상","주목군락","적가리골","방동약수","개인산"]},
+  "발왕산":{region:"강원",height:1458,lat:37.6542,lng:128.7167,desc:"평창의 산. 용평리조트 곤돌라로 접근 가능",features:["정상","용평리조트곤돌라","주목숲","풍력발전기","전망대"]},
+  "대암산":{region:"강원",height:1304,lat:38.2369,lng:128.1189,desc:"인제/양구 경계의 산. 용늪(람사르습지)이 유명",features:["정상","용늪","람사르습지","야생화","천혜자연"]},
+  "응봉산":{region:"강원",height:999,lat:37.1569,lng:128.9483,desc:"삼척의 산. 덕풍계곡과 용소가 유명",features:["정상","덕풍계곡","용소","제비봉","연화봉"]},
+  "매봉산":{region:"강원",height:1303,lat:37.1842,lng:128.9875,desc:"태백시의 산. 정상 바람의 언덕과 풍력발전단지가 유명",features:["정상","바람의언덕","풍력발전단지","매봉산풍경길","삼수령"]},
+  "함백산":{region:"강원",height:1573,lat:37.1417,lng:128.8917,desc:"태백/정선의 산. 만항재에서 출발하면 쉽게 오를 수 있음",features:["정상","만항재","은대봉","야생화","주목군락"]},
+  // 충북
+  "소백산":{region:"충북",height:1439,lat:36.9573,lng:128.4843,desc:"철쭉과 야생화의 명산. 천문대가 정상 부근에 위치",features:["비로봉","연화봉","철쭉군락","희방폭포","죽령옛길"]},
+  "속리산":{region:"충북",height:1058,lat:36.5436,lng:127.8706,desc:"법주사와 정이품송이 유명. 기암괴석이 아름다운 산",features:["천왕봉","법주사","문장대","세조길","정이품송"]},
+  "월악산":{region:"충북",height:1097,lat:36.8858,lng:128.1003,desc:"충주호와 어우러진 경관이 아름다운 산",features:["영봉","덕주사","송계계곡","하늘재","충주호"]},
+  "민주지산":{region:"충북",height:1242,lat:36.0158,lng:127.8764,desc:"물한계곡과 삼도봉으로 유명. 충북/전북/경북 3도 경계",features:["정상","삼도봉","물한계곡","각호산","석기봉"]},
+  "천태산":{region:"충북",height:715,lat:36.7397,lng:127.8583,desc:"영동군의 산. 영국사와 단풍이 유명한 사찰 명산",features:["정상","영국사","은행나무","반야사","와우산"]},
+  "구병산":{region:"충북",height:876,lat:36.5217,lng:127.9625,desc:"보은의 산. 아홉 개의 봉우리가 병풍처럼 늘어선 명산",features:["정상","구병산성","아홉봉우리","갈론계곡","빈대봉"]},
+  // 충남
+  "계룡산":{region:"충남",height:845,lat:36.3425,lng:127.0203,desc:"풍수지리의 명산. 동학사와 갑사 등 사찰이 유명",features:["천황봉","동학사","갑사","은선폭포","남매탑"]},
+  "대둔산":{region:"충남",height:878,lat:36.1203,lng:127.0989,desc:"금강의 소금강. 케이블카와 구름다리가 유명",features:["마천대","구름다리","케이블카","삼선계단","낙조대"]},
+  "서대산":{region:"충남",height:904,lat:36.1972,lng:127.2083,desc:"충남 최고봉. 금산에 위치한 바위산",features:["정상","석벽","개덕사","용굴","낙조봉"]},
+  "칠갑산":{region:"충남",height:561,lat:36.3944,lng:126.8778,desc:"청양의 산. 장승공원과 천장호 출렁다리가 유명",features:["정상","장승공원","천장호출렁다리","칠갑산장","알프스마을"]},
+  "가야산(충남)":{region:"충남",height:678,lat:36.5167,lng:126.6333,desc:"서산 가야산. 보원사지와 마애삼존불이 있는 역사의 산",features:["옥양봉","석문봉","보원사지","일락산","마애삼존불"]},
+  // 전북
+  "덕유산":{region:"전북",height:1614,lat:35.8638,lng:127.7467,desc:"무주리조트 곤돌라로 접근 가능. 겨울 상고대가 유명",features:["향적봉","무주리조트","구천동계곡","상고대","백련사"]},
+  "내장산":{region:"전북",height:763,lat:35.4894,lng:126.8882,desc:"가을 단풍의 명소. 내장사 단풍터널이 전국적으로 유명",features:["신선봉","내장사","단풍터널","케이블카","백양사"]},
+  "마이산":{region:"전북",height:686,lat:35.7547,lng:127.4108,desc:"진안의 명산. 말의 귀를 닮은 두 개의 봉우리가 특징",features:["암마이봉","수마이봉","탑사","은수사","마이산도립공원"]},
+  "모악산":{region:"전북",height:794,lat:35.7342,lng:127.0775,desc:"전주의 진산. 금산사와 함께하는 역사적 명산",features:["정상","금산사","미륵전","대원사","수왕폭포"]},
+  "방장산":{region:"전북",height:743,lat:35.5208,lng:126.8425,desc:"정읍의 산. 내장산과 이웃한 산으로 조용한 산행",features:["정상","방장산자연휴양림","편백숲","산림욕장","쉼터"]},
+  // 전남
+  "지리산":{region:"전남",height:1915,lat:35.3371,lng:127.7306,desc:"최초의 국립공원. 지리산 종주는 한국 등산의 성지. 천왕봉이 최고봉",features:["천왕봉","노고단","세석평전","칠선계곡","뱀사골"]},
+  "월출산":{region:"전남",height:809,lat:34.7662,lng:126.7034,desc:"호남의 소금강. 기암괴석과 구름다리가 유명",features:["천황봉","구름다리","도갑사","경포대","바람폭포"]},
+  "조계산":{region:"전남",height:884,lat:34.9833,lng:127.0167,desc:"순천의 산. 송광사와 선암사 두 고찰을 품은 산",features:["장군봉","송광사","선암사","굴목재","보조국사비"]},
+  "무등산":{region:"전남",height:1187,lat:35.1342,lng:126.9892,desc:"광주의 진산. 주상절리 서석대와 입석대가 유명",features:["천왕봉","서석대","입석대","증심사","원효사"]},
+  "두륜산":{region:"전남",height:703,lat:34.4833,lng:126.6167,desc:"해남의 산. 대흥사와 함께 남도 끝자락의 명산",features:["가련봉","대흥사","두륜봉","만일암","노승봉"]},
+  "천관산":{region:"전남",height:723,lat:34.5278,lng:126.9111,desc:"장흥의 산. 억새와 동백이 아름다운 호남 5대 명산",features:["연대봉","억새군락","장천재","환희대","석문"]},
+  "백암산":{region:"전남",height:741,lat:35.4208,lng:126.8897,desc:"장성의 산. 내장산 국립공원에 포함된 산으로 백양사가 유명",features:["상왕봉","백양사","쌍계루","약사암","가인마을"]},
+  // 경북
+  "주왕산":{region:"경북",height:721,lat:36.3936,lng:129.17,desc:"기암절벽과 폭포의 산. 주왕굴 전설이 유명",features:["가메봉","주왕굴","용추폭포","절골계곡","대전사"]},
+  "팔공산":{region:"경북",height:1193,lat:35.9879,lng:128.6956,desc:"갓바위 부처로 유명한 대구의 명산",features:["비로봉","갓바위","동화사","케이블카","팔공스카이라인"]},
+  "금오산":{region:"경북",height:977,lat:36.1028,lng:128.3369,desc:"구미의 산. 해운사와 대혜폭포가 유명",features:["현월봉","해운사","대혜폭포","케이블카","약사암"]},
+  "청량산":{region:"경북",height:870,lat:36.7439,lng:128.9261,desc:"봉화의 산. 퇴계 이황이 사랑한 명산",features:["장인봉","청량사","어풍대","축융봉","탁필봉"]},
+  "주흘산":{region:"경북",height:1106,lat:36.6458,lng:128.0708,desc:"문경새재가 있는 산. 역사적 고갯길이 유명",features:["영봉","문경새재","조령관","주흘관","여궁폭포"]},
+  "황장산":{region:"경북",height:1077,lat:36.7292,lng:128.5333,desc:"영주의 산. 황장목(소나무) 숲이 유명한 산",features:["정상","황장금산","소나무숲","국망봉","흑석사"]},
+  "일월산":{region:"경북",height:1219,lat:36.8025,lng:129.0892,desc:"영양의 산. 해맞이 명소로 일출이 아름다운 산",features:["일자봉","월자봉","일월산일출","천축사","용화사"]},
+  "보현산":{region:"경북",height:1124,lat:36.1683,lng:128.9767,desc:"영천/청송의 산. 보현산천문대가 유명",features:["정상","보현산천문대","산림욕장","사방댐","보현사"]},
+  // 경남
+  "가야산":{region:"경남",height:1430,lat:35.8175,lng:128.1206,desc:"해인사와 팔만대장경으로 유명한 산",features:["상왕봉","해인사","팔만대장경","홍류동계곡","서성재"]},
+  "황매산":{region:"경남",height:1108,lat:35.5006,lng:127.9803,desc:"5월 철쭉 군락지가 장관을 이루는 산",features:["정상","철쭉군락","모산재","황매평전","합천호"]},
+  "지리산(경남)":{region:"경남",height:1915,lat:35.3500,lng:127.7200,desc:"지리산 경남 방면. 천왕봉 접근의 주요 루트",features:["천왕봉","중산리코스","장터목대피소","칠선계곡","로타리대피소"]},
+  "금원산":{region:"경남",height:1353,lat:35.6403,lng:127.8831,desc:"거창의 산. 기백산과 연결되는 능선이 아름다움",features:["정상","기백산","유안청계곡","자연휴양림","억새평원"]},
+  "비슬산":{region:"경남",height:1084,lat:35.7458,lng:128.5347,desc:"달성/청도의 산. 참꽃축제로 유명한 산",features:["대견봉","참꽃군락","대견사터","조화봉","유가사"]},
+  "화왕산":{region:"경남",height:756,lat:35.5897,lng:128.5611,desc:"창녕의 산. 정상 억새밭과 화왕산성이 유명",features:["정상","억새밭","화왕산성","관룡사","자하곡"]},
+  "연화산":{region:"경남",height:528,lat:35.0511,lng:128.3319,desc:"고성의 산. 옥천사와 연꽃형상의 산세가 아름다움",features:["정상","옥천사","연화산도립공원","대원사","봉수대"]},
+  // 대구
+  "팔공산(대구)":{region:"대구",height:1193,lat:35.9879,lng:128.6956,desc:"대구의 진산. 갓바위와 동화사가 유명",features:["비로봉","갓바위","동화사","케이블카","은해사"]},
+  "비슬산(대구)":{region:"대구",height:1084,lat:35.7458,lng:128.5347,desc:"대구 달성의 산. 봄 참꽃 군락이 장관",features:["대견봉","참꽃군락","대견사터","조화봉","유가사"]},
+  "앞산":{region:"대구",height:660,lat:35.8253,lng:128.5858,desc:"대구 시민의 산. 앞산전망대에서 대구 시내 조망",features:["정상","앞산전망대","케이블카","안지랑골","산성산"]},
+  // 부산
+  "금정산":{region:"부산",height:802,lat:35.2658,lng:129.0522,desc:"부산의 진산. 금정산성과 범어사가 유명",features:["고당봉","금정산성","범어사","금샘","케이블카"]},
+  "백양산":{region:"부산",height:642,lat:35.1928,lng:129.0219,desc:"부산진구의 산. 성지곡수원지와 어린이대공원이 인접",features:["정상","성지곡수원지","부산어린이대공원","봉수대","산복도로조망"]},
+  "장산":{region:"부산",height:634,lat:35.1778,lng:129.1253,desc:"해운대의 뒷산. 해운대와 광안리 해변 조망이 뛰어남",features:["정상","장산폭포","해운대조망","대천공원","범바위"]},
+  // 울산
+  "가지산":{region:"울산",height:1241,lat:35.5972,lng:129.0833,desc:"영남알프스의 최고봉. 억새와 철쭉이 유명",features:["정상","쌀바위","석남사","운문령","영남알프스"]},
+  "신불산":{region:"울산",height:1159,lat:35.5500,lng:129.0333,desc:"영남알프스의 산. 정상 억새평원이 아름다움",features:["정상","억새평원","신불산폭포","간월재","영축산연결"]},
+  "간월산":{region:"울산",height:1069,lat:35.5333,lng:129.0500,desc:"영남알프스의 산. 간월재 억새가 유명한 산행지",features:["정상","간월재","억새평원","배내골","공룡발자국"]},
+  "영축산":{region:"울산",height:1059,lat:35.5167,lng:129.0667,desc:"영남알프스의 산. 통도사가 위치한 불교 명산",features:["정상","통도사","영축산능선","신불산연결","취서산"]},
+  // 대전
+  "보문산":{region:"대전",height:457,lat:36.3167,lng:127.4167,desc:"대전 시민의 산. 보문산성과 도심 조망이 좋음",features:["정상","보문산성","전망대","사정공원","동춘당"]},
+  "식장산":{region:"대전",height:598,lat:36.2833,lng:127.5333,desc:"대전 동구의 산. 대전의 진산으로 전망이 좋음",features:["정상","식장산자연휴양림","천연동굴","산림욕장","전망대"]},
+  // 제주
+  "한라산":{region:"제주",height:1950,lat:33.3617,lng:126.5292,desc:"대한민국 최고봉. 유네스코 세계자연유산. 백록담이 정상에 위치한 화산",features:["백록담","성판악코스","관음사코스","영실코스","구상나무숲"]},
+  "성판악":{region:"제주",height:1950,lat:33.3883,lng:126.5994,desc:"한라산 동쪽 등산로 입구. 백록담까지 가장 긴 코스",features:["성판악탐방로","속밭대피소","진달래밭대피소","백록담","사라오름"]},
+  "관음사":{region:"제주",height:1950,lat:33.4022,lng:126.5292,desc:"한라산 북쪽 등산로. 가장 험하지만 경관이 뛰어난 코스",features:["관음사탐방로","삼각봉대피소","왕관릉","용진각","구린굴"]},
+  "산방산":{region:"제주",height:395,lat:33.2433,lng:126.3131,desc:"서귀포의 종 모양 화산. 산방굴사가 유명",features:["산방굴사","용머리해안","산방산둘레길","하멜기념관","황우치해변"]},
+  "다랑쉬오름":{region:"제주",height:382,lat:33.4567,lng:126.8517,desc:"제주 동쪽의 아름다운 오름. 분화구가 잘 보존된 오름",features:["분화구","억새밭","제주올레","성산일출봉조망","목장길"]},
+};
+
+// =============================================
+// 전역 상태
+// =============================================
+let travelRecords = JSON.parse(localStorage.getItem('travelRecords') || '[]');
+let hikingRecords = JSON.parse(localStorage.getItem('hikingRecords') || '[]');
+let travelMap, hikingMap;
+let travelMarkers = [], hikingMarkers = [];
+let tempTravelMarker = null, tempHikingMarker = null;
+let lastNominatimCall = 0;
+
+function switchTab(tab) {
+  document.querySelectorAll('.tab').forEach(t => t.className = 'tab');
+  document.querySelectorAll('.panel').forEach(p => p.classList.remove('active'));
+  if (tab === 'travel') {
+    document.querySelector('.tab:first-child').classList.add('active-travel');
+    document.getElementById('panelTravel').classList.add('active');
+    setTimeout(() => travelMap.invalidateSize(), 100);
+  } else {
+    document.querySelector('.tab:last-child').classList.add('active-hiking');
+    document.getElementById('panelHiking').classList.add('active');
+    setTimeout(() => hikingMap.invalidateSize(), 100);
+  }
+}
+
+// =============================================
+// Pulse icon for temporary markers
+// =============================================
+function createPulseIcon(color) {
+  return L.divIcon({
+    className: '',
+    html: `<div style="width:20px;height:20px;border-radius:50%;background:${color};border:3px solid #fff;box-shadow:0 0 12px ${color};animation:pulse-marker 1.2s ease-in-out infinite;"></div>`,
+    iconSize: [20, 20],
+    iconAnchor: [10, 10]
+  });
+}
+
+// =============================================
+// 초기화
+// =============================================
+function initMaps() {
+  // Travel map
+  travelMap = L.map('travelMap', { scrollWheelZoom: true }).setView([30, 10], 2);
+  L.tileLayer('https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png', {
+    attribution: '&copy; OpenStreetMap &copy; CARTO', maxZoom: 18
+  }).addTo(travelMap);
+
+  // Hiking map
+  hikingMap = L.map('hikingMap', { scrollWheelZoom: true }).setView([36.5, 127.8], 7);
+  L.tileLayer('https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png', {
+    attribution: '&copy; OpenStreetMap &copy; CARTO', maxZoom: 18
+  }).addTo(hikingMap);
+
+  // Travel map click handler
+  travelMap.on('click', onTravelMapClick);
+  // Hiking map click handler
+  hikingMap.on('click', onHikingMapClick);
+
+  // Country select
+  const cs = document.getElementById('tCountry');
+  Object.keys(COUNTRIES).sort((a, b) => a.localeCompare(b, 'ko')).forEach(c => {
+    const o = document.createElement('option');
+    o.value = c; o.textContent = COUNTRIES[c].flag + ' ' + c;
+    cs.appendChild(o);
+  });
+
+  // Mountain select
+  populateMtSelect();
+
+  refreshTravel();
+  refreshHiking();
+}
+
+// =============================================
+// Travel Map Click -> Reverse Geocode
+// =============================================
+function onTravelMapClick(e) {
+  const { lat, lng } = e.latlng;
+
+  // Remove previous temp marker
+  if (tempTravelMarker) {
+    travelMap.removeLayer(tempTravelMarker);
+    tempTravelMarker = null;
+  }
+
+  // Add pulse marker
+  tempTravelMarker = L.marker([lat, lng], { icon: createPulseIcon('#f093fb') }).addTo(travelMap);
+  tempTravelMarker.bindPopup('<div style="text-align:center;padding:4px;"><b>위치 확인 중...</b></div>').openPopup();
+
+  // Throttle Nominatim
+  const now = Date.now();
+  const delay = Math.max(0, 1100 - (now - lastNominatimCall));
+
+  setTimeout(() => {
+    lastNominatimCall = Date.now();
+    fetch(`https://nominatim.openstreetmap.org/reverse?format=json&lat=${lat}&lon=${lng}&accept-language=ko&zoom=10`)
+      .then(r => r.json())
+      .then(data => {
+        if (!tempTravelMarker) return;
+        const addr = data.address || {};
+        const country = addr.country || '알 수 없음';
+        const city = addr.city || addr.town || addr.village || addr.county || addr.state || '';
+        const displayName = city ? `${country}, ${city}` : country;
+
+        const popupHtml = `<div class="map-click-popup" style="min-width:180px;">
+          <div style="font-size:14px;font-weight:700;margin-bottom:4px;">${displayName}</div>
+          <div style="font-size:11px;color:#888;margin-bottom:8px;">위도: ${lat.toFixed(4)}, 경도: ${lng.toFixed(4)}</div>
+          <div style="font-size:13px;margin-bottom:8px;">이 위치를 등록하시겠습니까?</div>
+          <div style="margin-bottom:6px;">
+            <label style="font-size:11px;color:#666;">날짜</label>
+            <input type="date" id="mapClickDate" style="width:100%;padding:4px 6px;border:1px solid #ccc;border-radius:4px;font-size:12px;">
+          </div>
+          <button class="popup-btn confirm" onclick="confirmTravelMapClick('${country.replace(/'/g,"\\'")}','${city.replace(/'/g,"\\'")}',${lat},${lng})">등록</button>
+          <button class="popup-btn cancel" onclick="cancelTravelMapClick()">취소</button>
+        </div>`;
+
+        tempTravelMarker.setPopupContent(popupHtml).openPopup();
+      })
+      .catch(() => {
+        if (!tempTravelMarker) return;
+        const popupHtml = `<div class="map-click-popup" style="min-width:180px;">
+          <div style="font-size:14px;font-weight:700;margin-bottom:4px;">위치 정보 없음</div>
+          <div style="font-size:11px;color:#888;margin-bottom:8px;">위도: ${lat.toFixed(4)}, 경도: ${lng.toFixed(4)}</div>
+          <div style="margin-bottom:6px;">
+            <label style="font-size:11px;color:#666;">나라</label>
+            <input type="text" id="mapClickCountry" placeholder="나라 이름" style="width:100%;padding:4px 6px;border:1px solid #ccc;border-radius:4px;font-size:12px;margin-bottom:4px;">
+            <label style="font-size:11px;color:#666;">도시</label>
+            <input type="text" id="mapClickCity" placeholder="도시 이름" style="width:100%;padding:4px 6px;border:1px solid #ccc;border-radius:4px;font-size:12px;margin-bottom:4px;">
+            <label style="font-size:11px;color:#666;">날짜</label>
+            <input type="date" id="mapClickDate" style="width:100%;padding:4px 6px;border:1px solid #ccc;border-radius:4px;font-size:12px;">
+          </div>
+          <button class="popup-btn confirm" onclick="confirmTravelMapClickManual(${lat},${lng})">등록</button>
+          <button class="popup-btn cancel" onclick="cancelTravelMapClick()">취소</button>
+        </div>`;
+        tempTravelMarker.setPopupContent(popupHtml).openPopup();
+      });
+  }, delay);
+}
+
+function confirmTravelMapClick(country, city, lat, lng) {
+  const dateEl = document.getElementById('mapClickDate');
+  const date = dateEl ? dateEl.value : '';
+  travelRecords.push({ country, city, date, lat, lng, id: Date.now() });
+  localStorage.setItem('travelRecords', JSON.stringify(travelRecords));
+  if (tempTravelMarker) { travelMap.removeLayer(tempTravelMarker); tempTravelMarker = null; }
+  refreshTravel();
+}
+
+function confirmTravelMapClickManual(lat, lng) {
+  const country = document.getElementById('mapClickCountry').value.trim() || '알 수 없음';
+  const city = document.getElementById('mapClickCity').value.trim() || '';
+  const dateEl = document.getElementById('mapClickDate');
+  const date = dateEl ? dateEl.value : '';
+  travelRecords.push({ country, city, date, lat, lng, id: Date.now() });
+  localStorage.setItem('travelRecords', JSON.stringify(travelRecords));
+  if (tempTravelMarker) { travelMap.removeLayer(tempTravelMarker); tempTravelMarker = null; }
+  refreshTravel();
+}
+
+function cancelTravelMapClick() {
+  if (tempTravelMarker) { travelMap.removeLayer(tempTravelMarker); tempTravelMarker = null; }
+}
+
+// =============================================
+// Hiking Map Click
+// =============================================
+function onHikingMapClick(e) {
+  const { lat, lng } = e.latlng;
+
+  if (tempHikingMarker) {
+    hikingMap.removeLayer(tempHikingMarker);
+    tempHikingMarker = null;
+  }
+
+  tempHikingMarker = L.marker([lat, lng], { icon: createPulseIcon('#38ef7d') }).addTo(hikingMap);
+
+  const popupHtml = `<div class="map-click-popup" style="min-width:180px;">
+    <div style="font-size:14px;font-weight:700;margin-bottom:4px;">산 등록</div>
+    <div style="font-size:11px;color:#888;margin-bottom:8px;">위도: ${lat.toFixed(4)}, 경도: ${lng.toFixed(4)}</div>
+    <div style="margin-bottom:6px;">
+      <label style="font-size:11px;color:#666;">산 이름</label>
+      <input type="text" id="mapHikeName" placeholder="산 이름 입력" style="width:100%;padding:4px 6px;border:1px solid #ccc;border-radius:4px;font-size:12px;margin-bottom:4px;">
+      <label style="font-size:11px;color:#666;">지역</label>
+      <input type="text" id="mapHikeRegion" placeholder="지역 (예: 강원)" style="width:100%;padding:4px 6px;border:1px solid #ccc;border-radius:4px;font-size:12px;margin-bottom:4px;">
+      <label style="font-size:11px;color:#666;">높이(m)</label>
+      <input type="number" id="mapHikeHeight" placeholder="높이" style="width:100%;padding:4px 6px;border:1px solid #ccc;border-radius:4px;font-size:12px;margin-bottom:4px;">
+      <label style="font-size:11px;color:#666;">날짜</label>
+      <input type="date" id="mapHikeDate" style="width:100%;padding:4px 6px;border:1px solid #ccc;border-radius:4px;font-size:12px;">
+    </div>
+    <button class="popup-btn confirm-hike" onclick="confirmHikingMapClick(${lat},${lng})">등록</button>
+    <button class="popup-btn cancel" onclick="cancelHikingMapClick()">취소</button>
+  </div>`;
+
+  tempHikingMarker.bindPopup(popupHtml).openPopup();
+}
+
+function confirmHikingMapClick(lat, lng) {
+  const name = document.getElementById('mapHikeName').value.trim();
+  if (!name) { alert('산 이름을 입력하세요'); return; }
+  const region = document.getElementById('mapHikeRegion').value.trim() || '';
+  const height = parseInt(document.getElementById('mapHikeHeight').value) || 0;
+  const date = document.getElementById('mapHikeDate').value || '';
+
+  hikingRecords.push({ mountain: name, region, height, date, lat, lng, id: Date.now() });
+  localStorage.setItem('hikingRecords', JSON.stringify(hikingRecords));
+  if (tempHikingMarker) { hikingMap.removeLayer(tempHikingMarker); tempHikingMarker = null; }
+  refreshHiking();
+}
+
+function cancelHikingMapClick() {
+  if (tempHikingMarker) { hikingMap.removeLayer(tempHikingMarker); tempHikingMarker = null; }
+}
+
+// =============================================
+// Country change -> populate cities
+// =============================================
+function onCountryChange() {
+  const country = document.getElementById('tCountry').value;
+  const citySelect = document.getElementById('tCity');
+  citySelect.innerHTML = '';
+
+  if (!country || !COUNTRIES[country]) {
+    citySelect.innerHTML = '<option value="">-- 나라를 먼저 선택 --</option>';
+    return;
+  }
+
+  const info = COUNTRIES[country];
+  citySelect.innerHTML = '<option value="">-- 도시 선택 (선택사항) --</option>';
+  if (info.cities) {
+    Object.keys(info.cities).forEach(city => {
+      const o = document.createElement('option');
+      o.value = city; o.textContent = city;
+      citySelect.appendChild(o);
+    });
+  }
+  const custom = document.createElement('option');
+  custom.value = '__custom__'; custom.textContent = '직접 입력...';
+  citySelect.appendChild(custom);
+
+  showCountryInfo(country);
+}
+
+// City custom input
+document.addEventListener('change', function(e) {
+  if (e.target.id === 'tCity' && e.target.value === '__custom__') {
+    const name = prompt('도시 이름을 입력하세요:');
+    if (name && name.trim()) {
+      const o = document.createElement('option');
+      o.value = name.trim(); o.textContent = name.trim();
+      e.target.insertBefore(o, e.target.lastChild);
+      e.target.value = name.trim();
+    } else {
+      e.target.value = '';
+    }
+  }
+});
+
+// =============================================
+// Mountain select
+// =============================================
+function populateMtSelect(region) {
+  const sel = document.getElementById('hMountain');
+  sel.innerHTML = '<option value="">-- 산 선택 --</option>';
+  const entries = Object.entries(MOUNTAINS)
+    .filter(([, info]) => !region || info.region === region)
+    .sort((a, b) => b[1].height - a[1].height);
+
+  entries.forEach(([name, info]) => {
+    const o = document.createElement('option');
+    o.value = name;
+    o.textContent = `${name} (${info.region} | ${info.height.toLocaleString()}m)`;
+    sel.appendChild(o);
+  });
+
+  // Add custom option
+  const custom = document.createElement('option');
+  custom.value = '__custom__'; custom.textContent = '-- 직접 입력 --';
+  sel.appendChild(custom);
+}
+
+function filterMountains() { populateMtSelect(document.getElementById('hRegion').value); }
+
+function onMountainChange() {
+  const val = document.getElementById('hMountain').value;
+  const customArea = document.getElementById('customMtArea');
+  if (val === '__custom__') {
+    customArea.classList.add('show');
+  } else {
+    customArea.classList.remove('show');
+    if (val && MOUNTAINS[val]) showMountainInfo(val);
+  }
+}
+
+// =============================================
+// Travel functions
+// =============================================
+function addTravel() {
+  const country = document.getElementById('tCountry').value;
+  const city = document.getElementById('tCity').value;
+  const date = document.getElementById('tDate').value;
+  if (!country) { alert('나라를 선택하세요'); return; }
+
+  const info = COUNTRIES[country];
+  const rec = { country, city: (city === '__custom__' ? '' : city), date, id: Date.now() };
+  // Add lat/lng from known data
+  if (city && info && info.cities && info.cities[city]) {
+    rec.lat = info.cities[city][0];
+    rec.lng = info.cities[city][1];
+  } else if (info) {
+    rec.lat = info.lat;
+    rec.lng = info.lng;
+  }
+  travelRecords.push(rec);
+  localStorage.setItem('travelRecords', JSON.stringify(travelRecords));
+  document.getElementById('tCity').value = '';
+  document.getElementById('tDate').value = '';
+  refreshTravel();
+  showCountryInfo(country);
+}
+
+function removeTravel(id) {
+  travelRecords = travelRecords.filter(r => r.id !== id);
+  localStorage.setItem('travelRecords', JSON.stringify(travelRecords));
+  refreshTravel();
+}
+
+function refreshTravel() {
+  travelMarkers.forEach(m => travelMap.removeLayer(m));
+  travelMarkers = [];
+
+  const countriesVisited = new Set();
+  const citiesVisited = new Set();
+  const countryMarkersAdded = new Set();
+  const cityMarkersAdded = new Set();
+
+  travelRecords.forEach(r => {
+    countriesVisited.add(r.country);
+    const info = COUNTRIES[r.country];
+
+    // Country marker (purple) - from known data
+    if (info && !countryMarkersAdded.has(r.country)) {
+      const cm = L.circleMarker([info.lat, info.lng], {
+        radius: 9, fillColor: '#f093fb', fillOpacity: 0.8, color: '#764ba2', weight: 2
+      }).addTo(travelMap);
+      cm.bindPopup(`<b>${info.flag} ${r.country}</b><br><i>수도: ${info.capital}</i>`);
+      cm.on('click', () => showCountryInfo(r.country));
+      travelMarkers.push(cm);
+      countryMarkersAdded.add(r.country);
+    }
+
+    // City marker (orange)
+    if (r.city) {
+      const ckey = r.country + '/' + r.city;
+      citiesVisited.add(ckey);
+      if (!cityMarkersAdded.has(ckey)) {
+        let coords = null;
+        if (info && info.cities && info.cities[r.city]) {
+          coords = info.cities[r.city];
+        } else if (r.lat && r.lng) {
+          coords = [r.lat, r.lng];
+        }
+        if (coords) {
+          const dm = L.circleMarker(coords, {
+            radius: 6, fillColor: '#fda085', fillOpacity: 0.9, color: '#f5576c', weight: 2
+          }).addTo(travelMap);
+          dm.bindPopup(`<b>${info ? info.flag : '\u{1F30D}'} ${r.city}</b><br>${r.country}${r.date ? '<br>' + r.date : ''}`);
+          if (info) dm.on('click', () => showCountryInfo(r.country));
+          travelMarkers.push(dm);
+          cityMarkersAdded.add(ckey);
+        }
+      }
+    } else if (r.lat && r.lng && !info) {
+      // Map-click record without known country data
+      if (!countryMarkersAdded.has('__mapclick__' + r.id)) {
+        const dm = L.circleMarker([r.lat, r.lng], {
+          radius: 7, fillColor: '#fda085', fillOpacity: 0.9, color: '#f5576c', weight: 2
+        }).addTo(travelMap);
+        dm.bindPopup(`<b>\u{1F30D} ${r.country}</b>${r.city ? '<br>' + r.city : ''}${r.date ? '<br>' + r.date : ''}`);
+        travelMarkers.push(dm);
+        countryMarkersAdded.add('__mapclick__' + r.id);
+      }
+    }
+  });
+
+  document.getElementById('tStatCountry').textContent = countriesVisited.size;
+  document.getElementById('tStatCity').textContent = citiesVisited.size;
+  document.getElementById('tStatTrips').textContent = travelRecords.length;
+
+  const list = document.getElementById('travelList');
+  if (travelRecords.length === 0) {
+    list.innerHTML = '<div style="text-align:center;color:#666;padding:30px;">아직 기록이 없습니다</div>';
+    return;
+  }
+  list.innerHTML = [...travelRecords].reverse().map(r => {
+    const info = COUNTRIES[r.country];
+    const flag = info ? info.flag : '\u{1F30D}';
+    return `<div class="record-item" onclick="showCountryInfo('${r.country.replace(/'/g, "\\'")}')">
+      <span class="flag">${flag}</span>
+      <div class="rec-info">
+        <div class="rec-main">${r.country}</div>
+        <div class="rec-sub">${r.city || '-'}</div>
+      </div>
+      <span class="rec-date">${r.date || '-'}</span>
+      <button class="btn-remove" onclick="event.stopPropagation();removeTravel(${r.id})">&#10005;</button>
+    </div>`;
+  }).join('');
+}
+
+function showCountryInfo(name) {
+  const el = document.getElementById('travelInfo');
+  const c = COUNTRIES[name];
+  if (!c) {
+    el.innerHTML = `<div class="info-title">\u{1F30D} ${name}</div><div style="color:#999;margin-top:12px;">등록된 상세 정보가 없습니다.</div>`;
+    return;
+  }
+
+  const visitedCities = [...new Set(travelRecords.filter(r => r.country === name && r.city).map(r => r.city))];
+
+  el.innerHTML = `
+    <div class="info-title">${c.flag} ${name}</div>
+    <div class="info-row"><span class="label">수도</span><span class="value">${c.capital}</span></div>
+    <div class="info-row"><span class="label">면적</span><span class="value">${c.area} km&sup2;</span></div>
+    <div class="info-row"><span class="label">인구</span><span class="value">${c.pop}</span></div>
+    <div class="info-row"><span class="label">언어</span><span class="value">${c.lang}</span></div>
+    <div class="info-row"><span class="label">통화</span><span class="value">${c.currency}</span></div>
+    ${visitedCities.length > 0 ? `<div class="info-row"><span class="label">방문도시</span><span class="value">${visitedCities.join(', ')}</span></div>` : ''}
+    <div class="attractions" style="margin-top:14px;">
+      <div style="font-size:12px;color:#aaa;margin-bottom:8px;">주요 관광지</div>
+      ${c.attractions.map(a => `<span class="attraction-tag">${a}</span>`).join('')}
+    </div>
+    ${c.cities ? `<div class="attractions" style="margin-top:10px;">
+      <div style="font-size:12px;color:#aaa;margin-bottom:8px;">주요 도시</div>
+      ${Object.keys(c.cities).map(ct => {
+        const visited = visitedCities.includes(ct);
+        return `<span class="attraction-tag" style="${visited ? 'background:rgba(253,160,133,0.3);border-color:#f5576c;color:#fda085;' : ''}">${visited ? '&#10003; ' : ''}${ct}</span>`;
+      }).join('')}
+    </div>` : ''}`;
+  travelMap.setView([c.lat, c.lng], 5, { animate: true });
+}
+
+// =============================================
+// Hiking functions
+// =============================================
+function addHiking() {
+  const mtVal = document.getElementById('hMountain').value;
+  const date = document.getElementById('hDate').value;
+
+  if (mtVal === '__custom__') {
+    // Custom input
+    const name = document.getElementById('customMtName').value.trim();
+    const region = document.getElementById('customMtRegion').value.trim();
+    const height = parseInt(document.getElementById('customMtHeight').value) || 0;
+    if (!name) { alert('산 이름을 입력하세요'); return; }
+    hikingRecords.push({ mountain: name, region, height, date, id: Date.now() });
+    localStorage.setItem('hikingRecords', JSON.stringify(hikingRecords));
+    document.getElementById('customMtName').value = '';
+    document.getElementById('customMtRegion').value = '';
+    document.getElementById('customMtHeight').value = '';
+    document.getElementById('hDate').value = '';
+    refreshHiking();
+    return;
+  }
+
+  if (!mtVal) { alert('산을 선택하세요'); return; }
+  const info = MOUNTAINS[mtVal];
+  const r = info ? info.region : '';
+
+  hikingRecords.push({ mountain: mtVal, region: r, height: info ? info.height : 0, date, id: Date.now() });
+  localStorage.setItem('hikingRecords', JSON.stringify(hikingRecords));
+  document.getElementById('hDate').value = '';
+  refreshHiking();
+  if (info) showMountainInfo(mtVal);
+}
+
+function removeHiking(id) {
+  hikingRecords = hikingRecords.filter(r => r.id !== id);
+  localStorage.setItem('hikingRecords', JSON.stringify(hikingRecords));
+  refreshHiking();
+}
+
+function refreshHiking() {
+  hikingMarkers.forEach(m => hikingMap.removeLayer(m));
+  hikingMarkers = [];
+  const mts = new Set();
+  let maxH = 0;
+  const markerAdded = new Set();
+
+  hikingRecords.forEach(r => {
+    mts.add(r.mountain);
+    const info = MOUNTAINS[r.mountain];
+    const h = info ? info.height : (r.height || 0);
+    if (h > maxH) maxH = h;
+
+    const mkey = r.mountain;
+    if (markerAdded.has(mkey)) return;
+
+    let lat, lng;
+    if (info) { lat = info.lat; lng = info.lng; }
+    else if (r.lat && r.lng) { lat = r.lat; lng = r.lng; }
+    else return;
+
+    const marker = L.circleMarker([lat, lng], {
+      radius: 9, fillColor: '#38ef7d', fillOpacity: 0.8, color: '#11998e', weight: 2
+    }).addTo(hikingMap);
+    marker.bindPopup(`<b>&#9968; ${r.mountain}</b><br>${h ? h + 'm' : ''}${r.date ? '<br>' + r.date : ''}`);
+    if (info) marker.on('click', () => showMountainInfo(r.mountain));
+    hikingMarkers.push(marker);
+    markerAdded.add(mkey);
+  });
+
+  document.getElementById('hStatMt').textContent = mts.size;
+  document.getElementById('hStatMax').textContent = maxH > 0 ? maxH.toLocaleString() : '-';
+  document.getElementById('hStatTrips').textContent = hikingRecords.length;
+
+  const list = document.getElementById('hikingList');
+  if (hikingRecords.length === 0) {
+    list.innerHTML = '<div style="text-align:center;color:#666;padding:30px;">아직 기록이 없습니다</div>';
+    return;
+  }
+  list.innerHTML = [...hikingRecords].reverse().map(r => {
+    const info = MOUNTAINS[r.mountain];
+    const h = info ? info.height : (r.height || '?');
+    const reg = info ? info.region : (r.region || '');
+    return `<div class="record-item" onclick="${info ? `showMountainInfo('${r.mountain.replace(/'/g, "\\'")}')` : ''}">
+      <span class="flag">&#9968;</span>
+      <div class="rec-info">
+        <div class="rec-main">${r.mountain}</div>
+        <div class="rec-sub">${reg} | ${h}m</div>
+      </div>
+      <span class="rec-date">${r.date || '-'}</span>
+      <button class="btn-remove" onclick="event.stopPropagation();removeHiking(${r.id})">&#10005;</button>
+    </div>`;
+  }).join('');
+}
+
+function showMountainInfo(name) {
+  const el = document.getElementById('hikingInfo');
+  const m = MOUNTAINS[name];
+  if (!m) {
+    el.innerHTML = `<div class="info-title">&#9968; ${name}</div><div style="color:#999;margin-top:12px;">등록된 상세 정보가 없습니다.</div>`;
+    return;
+  }
+
+  const visits = hikingRecords.filter(r => r.mountain === name);
+  el.innerHTML = `
+    <div class="info-title">&#9968; ${name}</div>
+    <div class="info-row"><span class="label">지역</span><span class="value">${m.region}</span></div>
+    <div class="info-row"><span class="label">높이</span><span class="value">${m.height.toLocaleString()}m</span></div>
+    <div class="info-row"><span class="label">설명</span><span class="value">${m.desc}</span></div>
+    ${visits.length > 0 ? `<div class="info-row"><span class="label">등산횟수</span><span class="value">${visits.length}회</span></div>` : ''}
+    ${visits.length > 0 ? `<div class="info-row"><span class="label">최근방문</span><span class="value">${visits[visits.length - 1].date || '-'}</span></div>` : ''}
+    <div class="attractions" style="margin-top:14px;">
+      <div style="font-size:12px;color:#aaa;margin-bottom:8px;">주요 포인트</div>
+      ${m.features.map(f => `<span class="attraction-tag">${f}</span>`).join('')}
+    </div>`;
+  hikingMap.setView([m.lat, m.lng], 12, { animate: true });
+}
+
+// Init on load
+window.addEventListener('DOMContentLoaded', initMaps);
+
+// ═══════════════════════════════════════════
+// PWA 서비스워커 등록 + 설치 버튼
+// ═══════════════════════════════════════════
+if ('serviceWorker' in navigator) {
+  navigator.serviceWorker.register('./sw.js').catch(() => {});
+}
+
+let deferredPrompt;
+window.addEventListener('beforeinstallprompt', (e) => {
+  e.preventDefault();
+  deferredPrompt = e;
+  const btn = document.getElementById('installBtn');
+  if (btn) btn.style.display = 'inline-block';
+});
+
+function installApp() {
+  if (!deferredPrompt) return;
+  deferredPrompt.prompt();
+  deferredPrompt.userChoice.then(() => {
+    deferredPrompt = null;
+    const btn = document.getElementById('installBtn');
+    if (btn) btn.style.display = 'none';
+  });
+}
+</script>
+</body>
+</html>
