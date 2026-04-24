@@ -5,9 +5,9 @@
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>My Travel & Hiking Checklist</title>
 <link rel="manifest" href="manifest.json">
-<meta name="theme-color" content="#302b63">
+<meta name="theme-color" content="#a78bfa">
 <meta name="apple-mobile-web-app-capable" content="yes">
-<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="apple-mobile-web-app-status-bar-style" content="default">
 <meta name="apple-mobile-web-app-title" content="여행등산">
 <link rel="apple-touch-icon" href="icons/icon-192.svg">
 <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css"/>
@@ -15,77 +15,97 @@
 <style>
   @import url('https://fonts.googleapis.com/css2?family=Noto+Sans+KR:wght@300;400;500;700;900&display=swap');
   * { margin:0; padding:0; box-sizing:border-box; }
-  body { font-family:'Noto Sans KR',sans-serif; background:linear-gradient(135deg,#0f0c29,#302b63,#24243e); color:#e0e0e0; min-height:100vh; }
-  .header { text-align:center; padding:30px 20px 10px; background:linear-gradient(135deg,rgba(15,12,41,0.9),rgba(48,43,99,0.9)); }
-  .header h1 { font-size:32px; font-weight:900; background:linear-gradient(90deg,#f093fb,#f5576c,#fda085); -webkit-background-clip:text; -webkit-text-fill-color:transparent; background-clip:text; letter-spacing:-1px; }
-  .header p { color:#aaa; font-size:13px; margin-top:4px; }
+  body { font-family:'Noto Sans KR',sans-serif; background:linear-gradient(135deg,#fce7f3,#e0e7ff,#fef3c7); color:#2d1b4e; min-height:100vh; }
+  .header { text-align:center; padding:30px 20px 10px; background:linear-gradient(135deg,rgba(196,181,253,0.85),rgba(244,114,182,0.75)); }
+  .header h1 { font-size:32px; font-weight:900; background:linear-gradient(90deg,#7c3aed,#db2777,#f97316); -webkit-background-clip:text; -webkit-text-fill-color:transparent; background-clip:text; letter-spacing:-1px; }
+  .header p { color:#4c3575; font-size:13px; margin-top:4px; }
   .tabs { display:flex; justify-content:center; gap:0; margin:20px auto 0; max-width:400px; }
-  .tab { flex:1; padding:14px 0; text-align:center; font-size:15px; font-weight:700; cursor:pointer; border:2px solid #444; transition:all 0.3s; user-select:none; }
+  .tab { flex:1; padding:14px 0; text-align:center; font-size:15px; font-weight:700; cursor:pointer; border:2px solid #c4b5fd; transition:all 0.3s; user-select:none; color:#6b4e8b; background:rgba(255,255,255,0.4); }
   .tab:first-child { border-radius:12px 0 0 12px; }
   .tab:last-child { border-radius:0 12px 12px 0; }
-  .tab.active-travel { background:linear-gradient(135deg,#667eea,#764ba2); border-color:#764ba2; color:#fff; }
-  .tab.active-hiking { background:linear-gradient(135deg,#11998e,#38ef7d); border-color:#38ef7d; color:#fff; }
-  .tab:not([class*="active"]):hover { background:rgba(255,255,255,0.05); }
+  .tab.active-travel { background:linear-gradient(135deg,#818cf8,#a78bfa); border-color:#7c3aed; color:#fff; }
+  .tab.active-hiking { background:linear-gradient(135deg,#34d399,#6ee7b7); border-color:#10b981; color:#fff; }
+  .tab:not([class*="active"]):hover { background:rgba(255,255,255,0.75); }
   .tab .icon { font-size:20px; display:block; margin-bottom:2px; }
   .container { max-width:1400px; margin:20px auto; padding:0 20px 40px; }
   .panel { display:none; } .panel.active { display:block; }
-  .map-instruction { text-align:center; font-size:12px; color:#b8b8d0; margin-bottom:8px; padding:6px 12px; background:rgba(255,255,255,0.05); border-radius:8px; border:1px solid rgba(255,255,255,0.08); }
-  .map-instruction span { color:#f093fb; font-weight:600; }
-  .hiking .map-instruction span { color:#38ef7d; }
-  .map-wrap { border-radius:16px; overflow:hidden; box-shadow:0 8px 32px rgba(0,0,0,0.4); border:2px solid rgba(255,255,255,0.1); margin-bottom:20px; position:relative; }
+  .map-instruction { text-align:center; font-size:12px; color:#6b4e8b; margin-bottom:8px; padding:6px 12px; background:rgba(255,255,255,0.6); border-radius:8px; border:1px solid rgba(167,139,250,0.25); }
+  .map-instruction span { color:#7c3aed; font-weight:600; }
+  .hiking .map-instruction span { color:#10b981; }
+  .map-wrap { border-radius:16px; overflow:hidden; box-shadow:0 8px 32px rgba(124,58,237,0.12); border:2px solid rgba(167,139,250,0.25); margin-bottom:20px; position:relative; }
   .map { height:450px; width:100%; }
-  .map-legend { position:absolute; bottom:10px; right:10px; z-index:1000; background:rgba(15,12,41,0.9); padding:10px 14px; border-radius:8px; font-size:11px; border:1px solid rgba(255,255,255,0.15); backdrop-filter:blur(6px); }
+  .map-legend { position:absolute; bottom:10px; right:10px; z-index:1000; background:rgba(255,255,255,0.92); padding:10px 14px; border-radius:8px; font-size:11px; border:1px solid rgba(167,139,250,0.3); backdrop-filter:blur(6px); color:#2d1b4e; box-shadow:0 2px 10px rgba(0,0,0,0.08); }
   .map-legend .leg-item { display:flex; align-items:center; gap:6px; margin:3px 0; }
   .map-legend .leg-dot { width:12px; height:12px; border-radius:50%; border:2px solid; }
   .content-row { display:flex; gap:20px; flex-wrap:wrap; }
   .col-left { flex:1; min-width:320px; } .col-right { flex:1; min-width:320px; }
-  .card { background:rgba(255,255,255,0.06); backdrop-filter:blur(10px); border-radius:16px; padding:24px; margin-bottom:20px; border:1px solid rgba(255,255,255,0.08); box-shadow:0 4px 20px rgba(0,0,0,0.2); }
-  .card-title { font-size:16px; font-weight:700; margin-bottom:16px; display:flex; align-items:center; gap:8px; }
+  .card { background:rgba(255,255,255,0.7); backdrop-filter:blur(10px); border-radius:16px; padding:24px; margin-bottom:20px; border:1px solid rgba(196,181,253,0.5); box-shadow:0 4px 20px rgba(124,58,237,0.08); }
+  .card-title { font-size:16px; font-weight:700; margin-bottom:16px; display:flex; align-items:center; gap:8px; color:#2d1b4e; }
   .card-title .dot { width:8px; height:8px; border-radius:50%; }
-  .travel .dot { background:linear-gradient(135deg,#667eea,#764ba2); }
-  .hiking .dot { background:linear-gradient(135deg,#11998e,#38ef7d); }
+  .travel .dot { background:linear-gradient(135deg,#818cf8,#a78bfa); }
+  .hiking .dot { background:linear-gradient(135deg,#10b981,#34d399); }
   .form-row { display:flex; gap:10px; margin-bottom:10px; flex-wrap:wrap; }
   .form-group { flex:1; min-width:120px; }
-  .form-group label { display:block; font-size:11px; color:#999; margin-bottom:4px; font-weight:500; }
-  .form-group input, .form-group select { width:100%; padding:10px 12px; background:rgba(255,255,255,0.08); border:1px solid rgba(255,255,255,0.15); border-radius:8px; color:#fff; font-size:14px; font-family:inherit; outline:none; transition:all 0.2s; }
-  .form-group input:focus, .form-group select:focus { border-color:#764ba2; background:rgba(255,255,255,0.12); }
-  .hiking .form-group input:focus, .hiking .form-group select:focus { border-color:#38ef7d; }
-  .form-group select option { background:#2a2a4a; color:#fff; }
-  .form-group input::placeholder { color:#666; }
+  .form-group label { display:block; font-size:11px; color:#6b4e8b; margin-bottom:4px; font-weight:500; }
+  .form-group input, .form-group select { width:100%; padding:10px 12px; background:rgba(255,255,255,0.85); border:1px solid rgba(167,139,250,0.4); border-radius:8px; color:#2d1b4e; font-size:14px; font-family:inherit; outline:none; transition:all 0.2s; }
+  .form-group input:focus, .form-group select:focus { border-color:#7c3aed; background:#fff; box-shadow:0 0 0 3px rgba(167,139,250,0.15); }
+  .hiking .form-group input:focus, .hiking .form-group select:focus { border-color:#10b981; box-shadow:0 0 0 3px rgba(52,211,153,0.15); }
+  .form-group select option { background:#fff; color:#2d1b4e; }
+  .form-group input::placeholder { color:#9ca3af; }
   .form-group select { cursor:pointer; }
-  .btn-add { width:100%; padding:12px; border:none; border-radius:10px; font-size:15px; font-weight:700; cursor:pointer; transition:all 0.3s; color:#fff; margin-top:6px; }
-  .travel .btn-add { background:linear-gradient(135deg,#667eea,#764ba2); }
-  .travel .btn-add:hover { transform:translateY(-2px); box-shadow:0 6px 20px rgba(118,75,162,0.4); }
-  .hiking .btn-add { background:linear-gradient(135deg,#11998e,#38ef7d); }
-  .hiking .btn-add:hover { transform:translateY(-2px); box-shadow:0 6px 20px rgba(56,239,125,0.3); }
-  .info-card { background:linear-gradient(135deg,rgba(102,126,234,0.15),rgba(118,75,162,0.15)); border-radius:16px; padding:24px; border:1px solid rgba(102,126,234,0.2); min-height:200px; transition:all 0.3s; }
-  .hiking .info-card { background:linear-gradient(135deg,rgba(17,153,142,0.15),rgba(56,239,125,0.15)); border-color:rgba(56,239,125,0.2); }
-  .info-card .info-title { font-size:20px; font-weight:900; margin-bottom:12px; }
-  .info-card .info-row { display:flex; justify-content:space-between; padding:8px 0; border-bottom:1px solid rgba(255,255,255,0.06); font-size:13px; }
-  .info-card .info-row .label { color:#aaa; min-width:60px; }
-  .info-card .info-row .value { font-weight:500; color:#fff; text-align:right; max-width:65%; }
-  .info-card .info-empty { color:#666; font-size:14px; text-align:center; padding:40px 0; }
+  .btn-add { flex:1; padding:12px; border:none; border-radius:10px; font-size:15px; font-weight:700; cursor:pointer; transition:all 0.3s; color:#fff; margin-top:6px; }
+  .travel .btn-add { background:linear-gradient(135deg,#818cf8,#a78bfa); }
+  .travel .btn-add:hover { transform:translateY(-2px); box-shadow:0 6px 20px rgba(167,139,250,0.5); }
+  .hiking .btn-add { background:linear-gradient(135deg,#10b981,#34d399); }
+  .hiking .btn-add:hover { transform:translateY(-2px); box-shadow:0 6px 20px rgba(52,211,153,0.45); }
+  .btn-gps { padding:12px 16px; border:none; border-radius:10px; font-size:14px; font-weight:700; cursor:pointer; transition:all 0.3s; color:#fff; margin-top:6px; background:linear-gradient(135deg,#f59e0b,#ef4444); white-space:nowrap; }
+  .btn-gps:hover { transform:translateY(-2px); box-shadow:0 6px 20px rgba(245,158,11,0.45); }
+  .btn-gps:disabled { opacity:0.6; cursor:wait; transform:none; }
+  .btn-row { display:flex; gap:8px; align-items:stretch; }
+  .view-toggle { display:flex; gap:4px; margin-left:auto; }
+  .view-btn { padding:4px 10px; font-size:11px; border:1px solid rgba(167,139,250,0.5); border-radius:14px; background:rgba(255,255,255,0.6); color:#6b4e8b; cursor:pointer; font-family:inherit; font-weight:600; transition:all 0.2s; }
+  .view-btn:hover { background:#fff; }
+  .view-btn.active-view { background:linear-gradient(135deg,#818cf8,#a78bfa); color:#fff; border-color:#7c3aed; }
+  .info-card { background:linear-gradient(135deg,rgba(196,181,253,0.3),rgba(244,114,182,0.22)); border-radius:16px; padding:24px; border:1px solid rgba(167,139,250,0.4); min-height:200px; transition:all 0.3s; }
+  .hiking .info-card { background:linear-gradient(135deg,rgba(167,243,208,0.35),rgba(110,231,183,0.25)); border-color:rgba(52,211,153,0.4); }
+  .info-card .info-title { font-size:20px; font-weight:900; margin-bottom:12px; color:#2d1b4e; }
+  .info-card .info-row { display:flex; justify-content:space-between; padding:8px 0; border-bottom:1px solid rgba(107,78,139,0.12); font-size:13px; }
+  .info-card .info-row .label { color:#6b4e8b; min-width:60px; }
+  .info-card .info-row .value { font-weight:500; color:#2d1b4e; text-align:right; max-width:65%; }
+  .info-card .info-empty { color:#9ca3af; font-size:14px; text-align:center; padding:40px 0; }
   .info-card .attractions { margin-top:12px; }
-  .info-card .attraction-tag { display:inline-block; padding:5px 12px; margin:3px; border-radius:20px; font-size:12px; background:rgba(255,255,255,0.08); border:1px solid rgba(255,255,255,0.12); }
-  .record-list { max-height:400px; overflow-y:auto; }
+  .info-card .attraction-tag { display:inline-block; padding:5px 12px; margin:3px; border-radius:20px; font-size:12px; background:rgba(255,255,255,0.7); border:1px solid rgba(167,139,250,0.3); color:#2d1b4e; }
+  .record-list { max-height:420px; overflow-y:auto; padding-right:2px; }
   .record-list::-webkit-scrollbar { width:4px; }
-  .record-list::-webkit-scrollbar-thumb { background:rgba(255,255,255,0.15); border-radius:4px; }
-  .record-item { display:flex; align-items:center; gap:12px; padding:12px 14px; margin-bottom:8px; background:rgba(255,255,255,0.04); border-radius:10px; border:1px solid rgba(255,255,255,0.06); cursor:pointer; transition:all 0.2s; }
-  .record-item:hover { background:rgba(255,255,255,0.08); transform:translateX(4px); }
+  .record-list::-webkit-scrollbar-thumb { background:rgba(167,139,250,0.4); border-radius:4px; }
+  .record-item { display:flex; align-items:center; gap:12px; padding:12px 14px; margin-bottom:8px; background:rgba(255,255,255,0.65); border-radius:10px; border:1px solid rgba(196,181,253,0.4); cursor:pointer; transition:all 0.2s; }
+  .record-item:hover { background:#fff; transform:translateX(4px); box-shadow:0 4px 12px rgba(124,58,237,0.1); }
   .record-item .flag { font-size:24px; }
   .record-item .rec-info { flex:1; }
-  .record-item .rec-main { font-size:14px; font-weight:700; }
-  .record-item .rec-sub { font-size:11px; color:#999; margin-top:2px; }
-  .record-item .rec-date { font-size:11px; color:#888; white-space:nowrap; }
-  .record-item .btn-remove { width:24px; height:24px; border-radius:50%; border:none; background:rgba(255,82,82,0.2); color:#ff5252; font-size:14px; cursor:pointer; opacity:0; transition:opacity 0.2s; display:flex; align-items:center; justify-content:center; }
+  .record-item .rec-main { font-size:14px; font-weight:700; color:#2d1b4e; }
+  .record-item .rec-sub { font-size:11px; color:#6b4e8b; margin-top:2px; }
+  .record-item .rec-date { font-size:11px; color:#6b4e8b; white-space:nowrap; }
+  .record-item .btn-remove { width:24px; height:24px; border-radius:50%; border:none; background:rgba(239,68,68,0.15); color:#dc2626; font-size:14px; cursor:pointer; opacity:0; transition:opacity 0.2s; display:flex; align-items:center; justify-content:center; }
   .record-item:hover .btn-remove { opacity:1; }
+  .group-card { background:rgba(255,255,255,0.7); border:1px solid rgba(196,181,253,0.4); border-radius:12px; margin-bottom:10px; overflow:hidden; }
+  .group-header { display:flex; align-items:center; gap:12px; padding:12px 14px; cursor:pointer; transition:background 0.2s; }
+  .group-header:hover { background:rgba(255,255,255,0.95); }
+  .group-header .flag { font-size:26px; }
+  .group-header .group-main { font-weight:700; color:#2d1b4e; font-size:14px; }
+  .group-header .group-sub { font-size:11px; color:#6b4e8b; margin-top:2px; }
+  .group-count { background:linear-gradient(135deg,#818cf8,#a78bfa); color:#fff; font-weight:700; font-size:12px; padding:4px 10px; border-radius:12px; min-width:36px; text-align:center; }
+  .group-items { padding:0 10px 10px; display:none; background:rgba(255,255,255,0.4); border-top:1px solid rgba(196,181,253,0.3); }
+  .group-items.show { display:block; padding-top:10px; }
+  .group-items .record-item { background:rgba(255,255,255,0.85); cursor:default; }
+  .group-items .record-item:hover { transform:none; }
+  .group-items .record-item .btn-remove { opacity:1; }
   .stats { display:flex; gap:12px; margin-bottom:20px; flex-wrap:wrap; }
-  .stat-box { flex:1; min-width:100px; padding:16px; border-radius:12px; text-align:center; background:rgba(255,255,255,0.05); border:1px solid rgba(255,255,255,0.08); }
+  .stat-box { flex:1; min-width:100px; padding:16px; border-radius:12px; text-align:center; background:rgba(255,255,255,0.65); border:1px solid rgba(196,181,253,0.4); box-shadow:0 2px 10px rgba(124,58,237,0.06); }
   .stat-box .stat-num { font-size:28px; font-weight:900; }
-  .travel .stat-box .stat-num { background:linear-gradient(135deg,#667eea,#f093fb); -webkit-background-clip:text; -webkit-text-fill-color:transparent; background-clip:text; }
-  .hiking .stat-box .stat-num { background:linear-gradient(135deg,#11998e,#38ef7d); -webkit-background-clip:text; -webkit-text-fill-color:transparent; background-clip:text; }
-  .stat-box .stat-label { font-size:11px; color:#888; margin-top:4px; }
-  .custom-input-area { margin-top:10px; padding:12px; background:rgba(255,255,255,0.04); border-radius:10px; border:1px solid rgba(255,255,255,0.08); display:none; }
+  .travel .stat-box .stat-num { background:linear-gradient(135deg,#6366f1,#a855f7); -webkit-background-clip:text; -webkit-text-fill-color:transparent; background-clip:text; }
+  .hiking .stat-box .stat-num { background:linear-gradient(135deg,#059669,#10b981); -webkit-background-clip:text; -webkit-text-fill-color:transparent; background-clip:text; }
+  .stat-box .stat-label { font-size:11px; color:#6b4e8b; margin-top:4px; }
+  .custom-input-area { margin-top:10px; padding:12px; background:rgba(255,255,255,0.5); border-radius:10px; border:1px solid rgba(196,181,253,0.4); display:none; }
   .custom-input-area.show { display:block; }
   .custom-input-area .form-row { margin-bottom:6px; }
   @keyframes pulse-marker {
@@ -97,10 +117,10 @@
   .leaflet-popup-content { font-family:'Noto Sans KR',sans-serif; }
   .leaflet-popup-content b { font-size:14px; }
   .map-click-popup .popup-btn { display:inline-block; margin-top:8px; padding:6px 16px; border:none; border-radius:6px; color:#fff; font-size:13px; font-weight:600; cursor:pointer; font-family:inherit; }
-  .map-click-popup .popup-btn.confirm { background:linear-gradient(135deg,#667eea,#764ba2); }
-  .map-click-popup .popup-btn.confirm-hike { background:linear-gradient(135deg,#11998e,#38ef7d); }
-  .map-click-popup .popup-btn.cancel { background:rgba(255,255,255,0.15); margin-left:6px; }
-  .map-click-popup input { width:100%; padding:6px 8px; margin-top:6px; background:rgba(0,0,0,0.3); border:1px solid rgba(255,255,255,0.2); border-radius:4px; color:#333; font-size:13px; font-family:inherit; }
+  .map-click-popup .popup-btn.confirm { background:linear-gradient(135deg,#818cf8,#a78bfa); }
+  .map-click-popup .popup-btn.confirm-hike { background:linear-gradient(135deg,#10b981,#34d399); }
+  .map-click-popup .popup-btn.cancel { background:#9ca3af; margin-left:6px; color:#fff; }
+  .map-click-popup input { width:100%; padding:6px 8px; margin-top:6px; background:#fff; border:1px solid #c4b5fd; border-radius:4px; color:#2d1b4e; font-size:13px; font-family:inherit; }
   @media(max-width:768px) { .content-row{flex-direction:column;} .map{height:300px;} .header h1{font-size:24px;} }
 </style>
 </head>
@@ -109,9 +129,9 @@
   <h1>My Travel & Hiking Checklist</h1>
   <p>세계 여행과 등산 경험을 기록하고 지도에서 확인하세요</p>
   <div style="margin-top:12px; display:flex; gap:8px; justify-content:center; flex-wrap:wrap;">
-    <button id="installBtn" onclick="installApp()" style="display:none; padding:8px 20px; border:2px solid #f093fb; background:rgba(240,147,251,0.15); color:#f093fb; border-radius:20px; font-size:13px; font-weight:700; cursor:pointer; font-family:inherit;">&#128242; 앱 설치하기</button>
-    <button onclick="exportData()" style="padding:8px 16px; border:1px solid rgba(255,255,255,0.2); background:rgba(255,255,255,0.08); color:#aaa; border-radius:20px; font-size:12px; cursor:pointer; font-family:inherit;">&#128190; 데이터 내보내기</button>
-    <button onclick="document.getElementById('importFile').click()" style="padding:8px 16px; border:1px solid rgba(255,255,255,0.2); background:rgba(255,255,255,0.08); color:#aaa; border-radius:20px; font-size:12px; cursor:pointer; font-family:inherit;">&#128194; 데이터 가져오기</button>
+    <button id="installBtn" onclick="installApp()" style="display:none; padding:8px 20px; border:2px solid #7c3aed; background:rgba(255,255,255,0.7); color:#7c3aed; border-radius:20px; font-size:13px; font-weight:700; cursor:pointer; font-family:inherit;">&#128242; 앱 설치하기</button>
+    <button onclick="exportData()" style="padding:8px 16px; border:1px solid rgba(124,58,237,0.3); background:rgba(255,255,255,0.75); color:#4c3575; border-radius:20px; font-size:12px; cursor:pointer; font-family:inherit; font-weight:600;">&#128190; 데이터 내보내기</button>
+    <button onclick="document.getElementById('importFile').click()" style="padding:8px 16px; border:1px solid rgba(124,58,237,0.3); background:rgba(255,255,255,0.75); color:#4c3575; border-radius:20px; font-size:12px; cursor:pointer; font-family:inherit; font-weight:600;">&#128194; 데이터 가져오기</button>
     <input type="file" id="importFile" accept=".json" style="display:none" onchange="importData(this)">
   </div>
 </div>
@@ -131,8 +151,8 @@
     <div class="map-wrap">
       <div class="map" id="travelMap"></div>
       <div class="map-legend">
-        <div class="leg-item"><span class="leg-dot" style="background:#f093fb;border-color:#764ba2;"></span> 국가(수도)</div>
-        <div class="leg-item"><span class="leg-dot" style="background:#fda085;border-color:#f5576c;"></span> 방문 도시</div>
+        <div class="leg-item"><span class="leg-dot" style="background:#a78bfa;border-color:#7c3aed;"></span> 국가(수도)</div>
+        <div class="leg-item"><span class="leg-dot" style="background:#fb923c;border-color:#ea580c;"></span> 방문 도시</div>
       </div>
     </div>
     <div class="content-row">
@@ -159,11 +179,21 @@
               <input type="date" id="tDate">
             </div>
           </div>
-          <button class="btn-add" onclick="addTravel()">+ 여행 기록 추가</button>
+          <div class="btn-row">
+            <button class="btn-add" onclick="addTravel()">+ 여행 기록 추가</button>
+            <button class="btn-gps" id="tGpsBtn" onclick="useGPSForTravel(this)" title="현재 GPS 위치를 자동으로 등록">&#128205; GPS</button>
+          </div>
         </div>
         <div class="card">
-          <div class="card-title"><span class="dot"></span> 여행 기록 목록</div>
-          <div class="record-list" id="travelList"><div style="text-align:center;color:#666;padding:30px;">아직 기록이 없습니다</div></div>
+          <div class="card-title">
+            <span class="dot"></span> 여행 기록 목록
+            <div class="view-toggle">
+              <button class="view-btn active-view" id="viewAll" onclick="setTravelView('all')">전체</button>
+              <button class="view-btn" id="viewCountry" onclick="setTravelView('country')">국가별</button>
+              <button class="view-btn" id="viewCity" onclick="setTravelView('city')">도시별</button>
+            </div>
+          </div>
+          <div class="record-list" id="travelList"><div style="text-align:center;color:#9ca3af;padding:30px;">아직 기록이 없습니다</div></div>
         </div>
       </div>
       <div class="col-right">
@@ -185,8 +215,8 @@
     <div class="map-wrap">
       <div class="map" id="hikingMap"></div>
       <div class="map-legend">
-        <div class="leg-item"><span class="leg-dot" style="background:#38ef7d;border-color:#11998e;"></span> 등산 기록</div>
-        <div class="leg-item"><span class="leg-dot" style="background:#ffd700;border-color:#ff8c00;"></span> 클릭 위치</div>
+        <div class="leg-item"><span class="leg-dot" style="background:#34d399;border-color:#059669;"></span> 등산 기록</div>
+        <div class="leg-item"><span class="leg-dot" style="background:#f59e0b;border-color:#d97706;"></span> 클릭 위치</div>
       </div>
     </div>
     <div class="content-row">
@@ -223,11 +253,14 @@
           <div class="form-row">
             <div class="form-group"><label>날짜</label><input type="date" id="hDate"></div>
           </div>
-          <button class="btn-add" onclick="addHiking()">+ 등산 기록 추가</button>
+          <div class="btn-row">
+            <button class="btn-add" onclick="addHiking()">+ 등산 기록 추가</button>
+            <button class="btn-gps" id="hGpsBtn" onclick="useGPSForHiking(this)" title="현재 GPS 위치에 산 등록">&#128205; GPS</button>
+          </div>
         </div>
         <div class="card">
           <div class="card-title"><span class="dot"></span> 등산 기록 목록</div>
-          <div class="record-list" id="hikingList"><div style="text-align:center;color:#666;padding:30px;">아직 기록이 없습니다</div></div>
+          <div class="record-list" id="hikingList"><div style="text-align:center;color:#9ca3af;padding:30px;">아직 기록이 없습니다</div></div>
         </div>
       </div>
       <div class="col-right">
@@ -645,6 +678,8 @@ let travelMap, hikingMap;
 let travelMarkers = [], hikingMarkers = [];
 let tempTravelMarker = null, tempHikingMarker = null;
 let lastNominatimCall = 0;
+let travelViewMode = 'all';
+let openGroups = new Set();  // 그룹별 펼침 상태 유지
 
 function switchTab(tab) {
   document.querySelectorAll('.tab').forEach(t => t.className = 'tab');
@@ -678,13 +713,13 @@ function createPulseIcon(color) {
 function initMaps() {
   // Travel map
   travelMap = L.map('travelMap', { scrollWheelZoom: true }).setView([30, 10], 2);
-  L.tileLayer('https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png', {
+  L.tileLayer('https://{s}.basemaps.cartocdn.com/light_all/{z}/{x}/{y}{r}.png', {
     attribution: '&copy; OpenStreetMap &copy; CARTO', maxZoom: 18
   }).addTo(travelMap);
 
   // Hiking map
   hikingMap = L.map('hikingMap', { scrollWheelZoom: true }).setView([36.5, 127.8], 7);
-  L.tileLayer('https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png', {
+  L.tileLayer('https://{s}.basemaps.cartocdn.com/light_all/{z}/{x}/{y}{r}.png', {
     attribution: '&copy; OpenStreetMap &copy; CARTO', maxZoom: 18
   }).addTo(hikingMap);
 
@@ -725,7 +760,7 @@ function onTravelMapClick(e) {
   }
 
   // Add pulse marker
-  tempTravelMarker = L.marker([lat, lng], { icon: createPulseIcon('#f093fb') }).addTo(travelMap);
+  tempTravelMarker = L.marker([lat, lng], { icon: createPulseIcon('#a78bfa') }).addTo(travelMap);
   tempTravelMarker.bindPopup('<div style="text-align:center;padding:4px;"><b>위치 확인 중...</b></div>').openPopup();
 
   // Throttle Nominatim
@@ -813,7 +848,7 @@ function onHikingMapClick(e) {
     tempHikingMarker = null;
   }
 
-  tempHikingMarker = L.marker([lat, lng], { icon: createPulseIcon('#38ef7d') }).addTo(hikingMap);
+  tempHikingMarker = L.marker([lat, lng], { icon: createPulseIcon('#34d399') }).addTo(hikingMap);
 
   const popupHtml = `<div class="map-click-popup" style="min-width:180px;">
     <div style="font-size:14px;font-weight:700;margin-bottom:4px;">산 등록</div>
@@ -1005,7 +1040,7 @@ function refreshTravel() {
     // Country marker (purple) - from known data
     if (info && !countryMarkersAdded.has(r.country)) {
       const cm = L.circleMarker([info.lat, info.lng], {
-        radius: 9, fillColor: '#f093fb', fillOpacity: 0.8, color: '#764ba2', weight: 2
+        radius: 9, fillColor: '#a78bfa', fillOpacity: 0.85, color: '#7c3aed', weight: 2
       }).addTo(travelMap);
       cm.bindPopup(`<b>${info.flag} ${r.country}</b><br><i>수도: ${info.capital}</i>`);
       cm.on('click', () => showCountryInfo(r.country));
@@ -1026,7 +1061,7 @@ function refreshTravel() {
         }
         if (coords) {
           const dm = L.circleMarker(coords, {
-            radius: 6, fillColor: '#fda085', fillOpacity: 0.9, color: '#f5576c', weight: 2
+            radius: 6, fillColor: '#fb923c', fillOpacity: 0.9, color: '#ea580c', weight: 2
           }).addTo(travelMap);
           dm.bindPopup(`<b>${info ? info.flag : '\u{1F30D}'} ${r.city}</b><br>${r.country}${r.date ? '<br>' + r.date : ''}`);
           if (info) dm.on('click', () => showCountryInfo(r.country));
@@ -1038,7 +1073,7 @@ function refreshTravel() {
       // Map-click record without known country data
       if (!countryMarkersAdded.has('__mapclick__' + r.id)) {
         const dm = L.circleMarker([r.lat, r.lng], {
-          radius: 7, fillColor: '#fda085', fillOpacity: 0.9, color: '#f5576c', weight: 2
+          radius: 7, fillColor: '#fb923c', fillOpacity: 0.9, color: '#ea580c', weight: 2
         }).addTo(travelMap);
         dm.bindPopup(`<b>\u{1F30D} ${r.country}</b>${r.city ? '<br>' + r.city : ''}${r.date ? '<br>' + r.date : ''}`);
         travelMarkers.push(dm);
@@ -1051,24 +1086,184 @@ function refreshTravel() {
   document.getElementById('tStatCity').textContent = citiesVisited.size;
   document.getElementById('tStatTrips').textContent = travelRecords.length;
 
+  renderTravelList();
+}
+
+// ─────────────────────────────────────────────
+// 여행 기록 목록 — 전체 / 국가별 / 도시별 뷰
+// ─────────────────────────────────────────────
+function setTravelView(mode) {
+  travelViewMode = mode;
+  document.querySelectorAll('#viewAll,#viewCountry,#viewCity').forEach(b => b.classList.remove('active-view'));
+  const btn = document.getElementById('view' + mode.charAt(0).toUpperCase() + mode.slice(1));
+  if (btn) btn.classList.add('active-view');
+  renderTravelList();
+}
+
+function toggleGroup(id) {
+  const el = document.getElementById(id);
+  if (!el) return;
+  if (openGroups.has(id)) { openGroups.delete(id); el.classList.remove('show'); }
+  else { openGroups.add(id); el.classList.add('show'); }
+}
+
+function escKey(s) { return String(s).replace(/[^a-zA-Z0-9가-힣]/g, '_'); }
+
+function renderTravelList() {
   const list = document.getElementById('travelList');
   if (travelRecords.length === 0) {
-    list.innerHTML = '<div style="text-align:center;color:#666;padding:30px;">아직 기록이 없습니다</div>';
+    list.innerHTML = '<div style="text-align:center;color:#9ca3af;padding:30px;">아직 기록이 없습니다</div>';
     return;
   }
-  list.innerHTML = [...travelRecords].reverse().map(r => {
-    const info = COUNTRIES[r.country];
-    const flag = info ? info.flag : '\u{1F30D}';
-    return `<div class="record-item" onclick="showCountryInfo('${r.country.replace(/'/g, "\\'")}')">
-      <span class="flag">${flag}</span>
-      <div class="rec-info">
-        <div class="rec-main">${r.country}</div>
-        <div class="rec-sub">${r.city || '-'}</div>
-      </div>
-      <span class="rec-date">${r.date || '-'}</span>
-      <button class="btn-remove" onclick="event.stopPropagation();removeTravel(${r.id})">&#10005;</button>
-    </div>`;
-  }).join('');
+
+  if (travelViewMode === 'all') {
+    list.innerHTML = [...travelRecords].reverse().map(r => {
+      const info = COUNTRIES[r.country];
+      const flag = info ? info.flag : '\u{1F30D}';
+      return `<div class="record-item" onclick="showCountryInfo('${r.country.replace(/'/g, "\\'")}')">
+        <span class="flag">${flag}</span>
+        <div class="rec-info">
+          <div class="rec-main">${r.country}</div>
+          <div class="rec-sub">${r.city || '-'}</div>
+        </div>
+        <span class="rec-date">${r.date || '-'}</span>
+        <button class="btn-remove" onclick="event.stopPropagation();removeTravel(${r.id})">&#10005;</button>
+      </div>`;
+    }).join('');
+    return;
+  }
+
+  if (travelViewMode === 'country') {
+    const groups = {};
+    travelRecords.forEach(r => { (groups[r.country] = groups[r.country] || []).push(r); });
+    const sorted = Object.entries(groups).sort((a, b) => b[1].length - a[1].length);
+    list.innerHTML = sorted.map(([country, recs]) => {
+      const info = COUNTRIES[country];
+      const flag = info ? info.flag : '\u{1F30D}';
+      const cities = [...new Set(recs.filter(r => r.city).map(r => r.city))];
+      const id = 'g-c-' + escKey(country);
+      const isOpen = openGroups.has(id);
+      return `<div class="group-card">
+        <div class="group-header" onclick="toggleGroup('${id}')">
+          <span class="flag">${flag}</span>
+          <div style="flex:1;">
+            <div class="group-main">${country}</div>
+            <div class="group-sub">${cities.length > 0 ? cities.length + '개 도시 · ' : ''}${recs.length}회 기록</div>
+          </div>
+          <span class="group-count">${recs.length}</span>
+        </div>
+        <div class="group-items ${isOpen ? 'show' : ''}" id="${id}">
+          ${recs.slice().sort((a, b) => (b.date || '').localeCompare(a.date || '')).map(r => `
+            <div class="record-item" onclick="showCountryInfo('${country.replace(/'/g, "\\'")}')">
+              <div class="rec-info">
+                <div class="rec-main">${r.city || '도시 미입력'}</div>
+                <div class="rec-sub">${r.date || '날짜 미입력'}</div>
+              </div>
+              <button class="btn-remove" onclick="event.stopPropagation();removeTravel(${r.id})">&#10005;</button>
+            </div>
+          `).join('')}
+        </div>
+      </div>`;
+    }).join('');
+    return;
+  }
+
+  if (travelViewMode === 'city') {
+    const groups = {};
+    travelRecords.filter(r => r.city).forEach(r => {
+      const key = r.country + '|' + r.city;
+      (groups[key] = groups[key] || []).push(r);
+    });
+    if (Object.keys(groups).length === 0) {
+      list.innerHTML = '<div style="text-align:center;color:#9ca3af;padding:30px;">도시가 입력된 기록이 없습니다<br><span style="font-size:11px;">전체 보기 또는 국가별 보기를 사용하세요</span></div>';
+      return;
+    }
+    const sorted = Object.entries(groups).sort((a, b) => b[1].length - a[1].length);
+    list.innerHTML = sorted.map(([key, recs]) => {
+      const [country, city] = key.split('|');
+      const info = COUNTRIES[country];
+      const flag = info ? info.flag : '\u{1F30D}';
+      const id = 'g-ct-' + escKey(key);
+      const isOpen = openGroups.has(id);
+      return `<div class="group-card">
+        <div class="group-header" onclick="toggleGroup('${id}')">
+          <span class="flag">${flag}</span>
+          <div style="flex:1;">
+            <div class="group-main">${city}</div>
+            <div class="group-sub">${country} · ${recs.length}회 방문</div>
+          </div>
+          <span class="group-count">${recs.length}</span>
+        </div>
+        <div class="group-items ${isOpen ? 'show' : ''}" id="${id}">
+          ${recs.slice().sort((a, b) => (b.date || '').localeCompare(a.date || '')).map(r => `
+            <div class="record-item" onclick="showCountryInfo('${country.replace(/'/g, "\\'")}')">
+              <div class="rec-info">
+                <div class="rec-sub">${r.date || '날짜 미입력'}</div>
+              </div>
+              <button class="btn-remove" onclick="event.stopPropagation();removeTravel(${r.id})">&#10005;</button>
+            </div>
+          `).join('')}
+        </div>
+      </div>`;
+    }).join('');
+    return;
+  }
+}
+
+// ─────────────────────────────────────────────
+// GPS 현재 위치 등록
+// ─────────────────────────────────────────────
+function useGPSForTravel(btn) {
+  if (!navigator.geolocation) { alert('이 브라우저는 GPS 위치 정보를 지원하지 않습니다.'); return; }
+  const orig = btn.innerHTML;
+  btn.innerHTML = '\u{1F4E1} 위치 확인 중...';
+  btn.disabled = true;
+  navigator.geolocation.getCurrentPosition(
+    (pos) => {
+      const lat = pos.coords.latitude, lng = pos.coords.longitude;
+      btn.innerHTML = orig; btn.disabled = false;
+      // 세계여행 탭으로 전환 + 지도 이동 + 클릭 플로우 재사용 (역지오코딩 포함)
+      switchTab('travel');
+      travelMap.setView([lat, lng], 10, { animate: true });
+      onTravelMapClick({ latlng: { lat, lng } });
+    },
+    (err) => {
+      btn.innerHTML = orig; btn.disabled = false;
+      const msgs = {
+        1: 'GPS 권한이 거부되었습니다. 브라우저 설정에서 위치 접근을 허용해 주세요.',
+        2: 'GPS 신호를 받을 수 없습니다. 실외 또는 창가에서 다시 시도해 주세요.',
+        3: 'GPS 응답 시간 초과. 다시 시도해 주세요.'
+      };
+      alert(msgs[err.code] || ('GPS 오류: ' + err.message));
+    },
+    { enableHighAccuracy: true, timeout: 12000, maximumAge: 30000 }
+  );
+}
+
+function useGPSForHiking(btn) {
+  if (!navigator.geolocation) { alert('이 브라우저는 GPS 위치 정보를 지원하지 않습니다.'); return; }
+  const orig = btn.innerHTML;
+  btn.innerHTML = '\u{1F4E1} 위치 확인 중...';
+  btn.disabled = true;
+  navigator.geolocation.getCurrentPosition(
+    (pos) => {
+      const lat = pos.coords.latitude, lng = pos.coords.longitude;
+      btn.innerHTML = orig; btn.disabled = false;
+      switchTab('hiking');
+      hikingMap.setView([lat, lng], 13, { animate: true });
+      onHikingMapClick({ latlng: { lat, lng } });
+    },
+    (err) => {
+      btn.innerHTML = orig; btn.disabled = false;
+      const msgs = {
+        1: 'GPS 권한이 거부되었습니다. 브라우저 설정에서 위치 접근을 허용해 주세요.',
+        2: 'GPS 신호를 받을 수 없습니다. 실외 또는 창가에서 다시 시도해 주세요.',
+        3: 'GPS 응답 시간 초과. 다시 시도해 주세요.'
+      };
+      alert(msgs[err.code] || ('GPS 오류: ' + err.message));
+    },
+    { enableHighAccuracy: true, timeout: 12000, maximumAge: 30000 }
+  );
 }
 
 function showCountryInfo(name) {
@@ -1165,7 +1360,7 @@ function refreshHiking() {
     else return;
 
     const marker = L.circleMarker([lat, lng], {
-      radius: 9, fillColor: '#38ef7d', fillOpacity: 0.8, color: '#11998e', weight: 2
+      radius: 9, fillColor: '#34d399', fillOpacity: 0.85, color: '#059669', weight: 2
     }).addTo(hikingMap);
     marker.bindPopup(`<b>&#9968; ${r.mountain}</b><br>${h ? h + 'm' : ''}${r.date ? '<br>' + r.date : ''}`);
     if (info) marker.on('click', () => showMountainInfo(r.mountain));
@@ -1179,7 +1374,7 @@ function refreshHiking() {
 
   const list = document.getElementById('hikingList');
   if (hikingRecords.length === 0) {
-    list.innerHTML = '<div style="text-align:center;color:#666;padding:30px;">아직 기록이 없습니다</div>';
+    list.innerHTML = '<div style="text-align:center;color:#9ca3af;padding:30px;">아직 기록이 없습니다</div>';
     return;
   }
   list.innerHTML = [...hikingRecords].reverse().map(r => {

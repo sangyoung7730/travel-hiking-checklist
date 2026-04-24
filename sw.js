@@ -1,4 +1,4 @@
-const CACHE_NAME = 'travel-hiking-v2';
+const CACHE_NAME = 'travel-hiking-v3';
 const ASSETS = [
   './',
   './index.html',
@@ -21,8 +21,8 @@ self.addEventListener('activate', e => {
 });
 
 self.addEventListener('fetch', e => {
-  // Network first for API calls, cache first for assets
-  if (e.request.url.includes('nominatim') || e.request.url.includes('tile')) {
+  // Network first for dynamic (geocoding / map tiles), cache first for app shell
+  if (e.request.url.includes('nominatim') || e.request.url.includes('tile') || e.request.url.includes('basemaps.cartocdn')) {
     e.respondWith(fetch(e.request).catch(() => caches.match(e.request)));
   } else {
     e.respondWith(caches.match(e.request).then(r => r || fetch(e.request)));
